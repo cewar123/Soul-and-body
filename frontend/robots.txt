@@ -1,0 +1,7 @@
+# Robots — Soul and Body
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://soul-and-body.example.com/sitemap.xml

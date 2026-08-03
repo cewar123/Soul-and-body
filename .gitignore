@@ -1,0 +1,35 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno y secretos
+.env
+.env.*
+!**/.env.example
+
+# Base de datos local (SQLite)
+backend/data/
+**/data/*.sqlite
+**/data/*.sqlite3
+**/data/*.db
+**/data/*.db-shm
+**/data/*.db-wal
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Builds / dist
+dist/
+build/

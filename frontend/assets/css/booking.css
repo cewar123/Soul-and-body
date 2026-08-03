@@ -1,0 +1,84 @@
+/* =========================================================================
+   Soul and Body — Wizard de reserva (4 pasos)
+   ========================================================================= */
+
+.reserva {
+  background: linear-gradient(155deg, var(--ink), #3a2f2a); border-radius: 22px; overflow: hidden;
+  display: grid; grid-template-columns: 0.92fr 1.08fr; box-shadow: var(--shadow);
+}
+.reserva .info { padding: 44px; color: #f3e8e2; }
+.reserva .info .kick { color: var(--gold); }
+.reserva .info h2 { color: #fff; font-size: clamp(26px, 3.6vw, 38px); margin: 12px 0 16px; }
+.reserva .info p { color: #cdbcb3; font-size: 15.5px; margin-bottom: 20px; }
+.reserva .info ul { list-style: none; display: grid; gap: 12px; }
+.reserva .info li { display: flex; gap: 11px; font-size: 14.5px; color: #e6d8d1; }
+.reserva .info li span { color: var(--gold); font-weight: 800; }
+.reserva .contact-mini { margin-top: 26px; font-size: 13px; color: #b6a49b; }
+.reserva .contact-mini a { color: var(--gold); font-weight: 600; }
+
+.form { background: var(--card); padding: 34px; position: relative; min-height: 520px; }
+
+/* Barra de progreso */
+.steps { display: flex; gap: 6px; margin-bottom: 22px; }
+.steps .dot { flex: 1; height: 5px; border-radius: 999px; background: var(--line); transition: background 0.3s; }
+.steps .dot.active { background: var(--rose); }
+.steps .dot.done { background: var(--gold); }
+
+.step { display: none; animation: fade 0.35s ease; }
+.step.active { display: block; }
+@keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .step { animation: none; } }
+
+.step h3 { font-size: 21px; margin-bottom: 4px; }
+.step .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+
+/* Selección de servicio */
+.svc-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.svc-opt {
+  border: 1px solid var(--line); border-radius: 10px; padding: 14px; cursor: pointer; background: #fff;
+  font-size: 14px; font-weight: 600; text-align: left; transition: 0.2s; color: var(--ink);
+}
+.svc-opt:hover { border-color: var(--rose); }
+.svc-opt.sel { background: var(--rose); color: #fff; border-color: var(--rose); }
+@media (max-width: 480px) { .svc-opts { grid-template-columns: 1fr; } }
+
+/* Honeypot */
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+/* Rejilla de horarios */
+.slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 6px; }
+.slot {
+  border: 1px solid var(--line); border-radius: 8px; padding: 11px 4px; font-size: 14px; font-weight: 600;
+  background: #fff; cursor: pointer; transition: 0.15s; color: var(--ink); text-align: center;
+}
+.slot:hover:not(:disabled) { border-color: var(--rose); }
+.slot.sel { background: var(--rose); color: #fff; border-color: var(--rose); }
+.slot:disabled { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; }
+@media (max-width: 480px) { .slots { grid-template-columns: repeat(3, 1fr); } }
+
+.slots-empty { color: var(--muted); font-size: 14px; padding: 18px 0; text-align: center; }
+
+/* Navegación de pasos */
+.step-nav { display: flex; gap: 10px; margin-top: 22px; }
+.step-nav .btn { flex: 1; }
+
+/* Resumen de confirmación */
+.summary { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+.summary .row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 14px; }
+.summary .row .k { color: var(--muted); }
+.summary .row .v { font-weight: 700; text-align: right; }
+
+/* Pantalla de éxito */
+.ok-msg { text-align: center; padding: 20px 6px; }
+.ok-msg .big {
+  width: 64px; height: 64px; border-radius: 50%; background: var(--ok-bg); color: var(--ok);
+  display: grid; place-items: center; margin: 0 auto 14px; font-size: 30px;
+}
+.ok-msg h3 { margin-bottom: 8px; }
+.ok-msg p { color: var(--muted); font-size: 14.5px; margin-bottom: 8px; }
+.ok-msg .ref { font-family: var(--serif); font-size: 22px; color: var(--rose-d); letter-spacing: 0.06em; margin: 10px 0 4px; }
+
+@media (max-width: 860px) {
+  .reserva { grid-template-columns: 1fr; }
+  .form { min-height: 0; }
+}

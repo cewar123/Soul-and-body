@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-lint-test:
+    name: Backend · lint + test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Lint
+        working-directory: backend
+        run: npm run lint
+
+      - name: Test
+        working-directory: backend
+        run: npm test
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-test-jwt-secret-very-long-and-random-aaaaaaaaaaaaaa
+          CSRF_SECRET: ci-test-csrf-secret-very-long-and-random-bbbbbbbbbb
+          ADMIN_USERNAME: ciadmin
+          ADMIN_PASSWORD: CIPass123!
+          BUSINESS_TZ: America/Bogota
+          BUSINESS_WHATSAPP: 573136147706
+          PUBLIC_URL: http://localhost:3000

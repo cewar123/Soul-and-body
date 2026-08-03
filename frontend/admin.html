@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#c98a86" />
+  <title>Panel · Soul and Body</title>
+  <link rel="icon" type="image/jpeg" href="./assets/images/logo.jpg" />
+  <meta name="api-base" content="https://api.soul-and-body.example.com/api" />
+  <link rel="stylesheet" href="./assets/css/tokens.css" />
+  <link rel="stylesheet" href="./assets/css/base.css" />
+  <link rel="stylesheet" href="./assets/css/admin.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Saltar al panel</a>
+
+  <!-- Pantalla de login -->
+  <div class="login-screen" id="loginScreen" style="display:none">
+    <main id="main" class="login-card" role="main">
+      <img src="./assets/images/logo.jpg" alt="Soul and Body" width="76" height="76" />
+      <h1>Panel de administración</h1>
+      <p class="sub">Soul and Body · Gestión de citas</p>
+      <form id="loginForm" autocomplete="on" novalidate>
+        <div class="field">
+          <label for="username">Usuario</label>
+          <input type="text" id="username" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" autocomplete="current-password" required />
+        </div>
+        <div class="login-err" id="loginErr" role="alert"></div>
+        <button class="btn" id="loginBtn" type="submit" style="width:100%">Ingresar</button>
+      </form>
+    </main>
+  </div>
+
+  <!-- Aplicación -->
+  <div class="app" id="app">
+    <header class="topbar">
+      <div class="topbar-in">
+        <div class="brand">
+          <img src="./assets/images/logo.jpg" alt="" width="40" height="40" />
+          <div><b>Soul and Body</b><small>Panel de citas</small></div>
+        </div>
+        <div class="topbar-actions">
+          <span class="who-mini" id="whoMini"></span>
+          <button class="btn ghost sm" id="refreshBtn" type="button">Actualizar</button>
+          <button class="btn ghost sm" id="logoutBtn" type="button">Salir</button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main" class="container" role="main">
+      <h1 class="visually-hidden" style="position:absolute;left:-9999px">Panel de citas</h1>
+      <!-- Métricas -->
+      <div class="stats" aria-label="Métricas del panel">
+        <div class="stat"><b id="statToday">0</b><small>Citas hoy</small></div>
+        <div class="stat"><b id="statUpcoming">0</b><small>Próximas</small></div>
+        <div class="stat"><b id="statPending">0</b><small>Pendientes</small></div>
+        <div class="stat"><b id="statTotal">0</b><small>Total histórico</small></div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filters">
+        <div class="field">
+          <label for="fStatus">Estado</label>
+          <select id="fStatus">
+            <option value="">Todos</option>
+            <option value="pending">Pendientes</option>
+            <option value="confirmed">Confirmadas</option>
+            <option value="completed">Completadas</option>
+            <option value="cancelled">Canceladas</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fDate">Fecha</label>
+          <input type="date" id="fDate" />
+        </div>
+        <div class="field grow">
+          <label for="fSearch">Buscar</label>
+          <input type="text" id="fSearch" placeholder="Nombre, teléfono, correo o código" maxlength="60" />
+        </div>
+        <button class="btn" id="applyFilters" type="button">Filtrar</button>
+        <button class="btn ghost" id="clearFilters" type="button">Limpiar</button>
+      </div>
+
+      <!-- Tabla -->
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Fecha / hora</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">Servicio</th>
+                <th scope="col">Contacto</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal de detalle -->
+  <div class="modal-back" id="modalBack">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle">Detalle de la cita</h3>
+      <div id="modalBody"></div>
+      <button class="btn ghost close" id="modalClose" type="button" style="width:100%">Cerrar</button>
+    </div>
+  </div>
+
+  <script type="module" src="./assets/js/pages/admin.js"></script>
+</body>
+</html>

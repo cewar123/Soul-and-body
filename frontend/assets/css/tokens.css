@@ -1,0 +1,44 @@
+/* =========================================================================
+   Soul and Body — Design tokens
+   Única fuente de variables CSS (colores, tipografía, espaciado).
+   ========================================================================= */
+
+:root {
+  /* Paleta principal */
+  --bg: #faf5f1;
+  --ink: #2a2320;
+  --muted: #6f615a;          /* Bump a #6f615a para pasar WCAG AA 4.5:1 sobre --bg */
+  --rose: #c98a86;
+  --rose-d: #b56f6a;
+  --mauve: #a67c86;
+  --gold: #c9a56a;
+  --gold-d: #b8934f;
+  --card: #fffdfb;
+  --line: #ecdfd7;
+  --ok: #2e9e5b;
+  --ok-bg: #e7f5ec;
+  --warn: #c98a2a;
+  --warn-bg: #fdf1dc;
+  --danger: #c0554f;
+  --danger-bg: #f6e0de;
+  --info: #5b8bb0;
+  --info-bg: #e4ecf3;
+
+  /* Sombras y radios */
+  --shadow: 0 26px 60px -30px rgba(120, 80, 72, 0.5);
+  --shadow-sm: 0 8px 24px -14px rgba(120, 80, 72, 0.55);
+  --shadow-admin: 0 10px 30px -18px rgba(120, 80, 72, 0.5);
+  --radius: 14px;
+
+  /* Tipografía */
+  --serif: 'Georgia', 'Times New Roman', serif;
+  --sans: 'Segoe UI', system-ui, -apple-system, Helvetica, Arial, sans-serif;
+
+  /* Focus ring (WCAG 2.1) */
+  --focus: 0 0 0 3px rgba(201, 138, 134, 0.45);
+  --focus-strong: 0 0 0 3px rgba(201, 138, 134, 0.85);
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Hook para tema oscuro futuro. Por ahora el sitio es claro. */
+}

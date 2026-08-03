@@ -1,0 +1,41 @@
+{
+  "name": "soul-and-body-backend",
+  "version": "2.0.0",
+  "description": "Backend del sistema de reservas de Soul and Body — Centro Estético (Wendy de la Hoz, Envigado).",
+  "author": "Soul and Body",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "migrate": "node src/db/migrate.js",
+    "seed": "node src/db/seed.js",
+    "setup": "npm run migrate && npm run seed",
+    "test": "node --test test/*.test.js",
+    "lint": "eslint \"src/**/*.js\" \"test/**/*.js\"",
+    "lint:fix": "eslint \"src/**/*.js\" \"test/**/*.js\" --fix",
+    "format": "prettier -w \"src/**/*.{js,json,md}\" \"test/**/*.js\""
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.10.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.10.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "supertest": "^7.0.0"
+  }
+}

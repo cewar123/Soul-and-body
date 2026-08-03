@@ -1,0 +1,16 @@
+{
+  "name": "Soul and Body",
+  "short_name": "Soul&Body",
+  "description": "Centro estético en Envigado — Reserva tu valoración en línea.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf5f1",
+  "theme_color": "#c98a86",
+  "lang": "es-CO",
+  "icons": [
+    { "src": "./assets/images/logo.jpg", "sizes": "192x192", "type": "image/jpeg" },
+    { "src": "./assets/images/logo.jpg", "sizes": "512x512", "type": "image/jpeg" }
+  ]
+}
