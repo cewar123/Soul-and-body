@@ -44,6 +44,43 @@ async function init() {
     goStep(1);
   } catch {
     toast('No se pudo cargar el formulario de reservas. Recarga la página.', 'err');
+    return;
+  }
+
+  // Si la clienta está logueada, pre-rellenamos sus datos y los protegemos.
+  try {
+    const me = await api.get('/customer/me');
+    prefillFromAccount(me.data);
+    personalizeNav(me.data);
+  } catch {
+    /* guest: noop */
+  }
+}
+
+function prefillFromAccount(me) {
+  if (!me) return;
+  if (me.name && el.name) {
+    el.name.value = me.name;
+    el.name.readOnly = true;
+    el.name.title = 'Dato de tu cuenta. Para cambiarlo, edita tu perfil.';
+  }
+  if (me.phone && el.phone) {
+    el.phone.value = me.phone;
+    el.phone.readOnly = true;
+    el.phone.title = 'Dato de tu cuenta. Para cambiarlo, edita tu perfil.';
+  }
+  if (me.email && el.email) {
+    el.email.value = me.email;
+    el.email.readOnly = true;
+    el.email.title = 'Dato de tu cuenta. Para cambiarlo, edita tu perfil.';
+  }
+}
+
+function personalizeNav(me) {
+  const nav = document.getElementById('navCuenta');
+  if (nav && me.name) {
+    nav.textContent = me.name.split(' ')[0] || 'Mi cuenta';
+    nav.setAttribute('href', './cuenta.html');
   }
 }
 

@@ -27,6 +27,7 @@ async function create(data) {
       time: data.time,
       notes: data.notes,
       source_ip: data.source_ip,
+      customer_id: data.customer_id || null,
     })
     .select('*')
     .single();
@@ -114,6 +115,18 @@ async function list({ status, date, from, to, q, limit = 200, offset = 0 } = {})
   return data || [];
 }
 
+/** Lista las citas de un cliente concreto (para "Mis citas"). */
+async function listByCustomer(customerId) {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('*')
+    .eq('customer_id', customerId)
+    .order('date', { ascending: true })
+    .order('time', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
 /** Métricas rápidas para el dashboard. */
 async function stats(todayStr) {
   const [total, pending, upcoming, today] = await Promise.all([
@@ -152,5 +165,6 @@ module.exports = {
   slotIsTaken,
   updateStatus,
   list,
+  listByCustomer,
   stats,
 };

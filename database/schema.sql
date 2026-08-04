@@ -71,6 +71,7 @@ CREATE TABLE appointments (
   status      TEXT        NOT NULL DEFAULT 'pending'
                 CHECK (status IN ('pending','confirmed','cancelled','completed')),
   source_ip   TEXT,                                -- para auditoría / anti-abuso
+  customer_id BIGINT      REFERENCES customers(id) ON DELETE SET NULL, -- NULL = reserva de invitada
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -82,10 +83,11 @@ CREATE UNIQUE INDEX idx_appointments_slot_active
   ON appointments (date, time)
   WHERE status IN ('pending', 'confirmed');
 
--- Índices de apoyo para el panel de administración.
-CREATE INDEX idx_appointments_date    ON appointments (date);
-CREATE INDEX idx_appointments_status  ON appointments (status);
-CREATE INDEX idx_appointments_created ON appointments (created_at);
+-- Índices de apoyo para el panel de administración y "mis citas".
+CREATE INDEX idx_appointments_date        ON appointments (date);
+CREATE INDEX idx_appointments_status      ON appointments (status);
+CREATE INDEX idx_appointments_created     ON appointments (created_at);
+CREATE INDEX idx_appointments_customer_id ON appointments (customer_id);
 
 CREATE TRIGGER trg_appointments_updated
 BEFORE UPDATE ON appointments

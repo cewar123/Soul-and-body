@@ -33,23 +33,38 @@ function buildSession({ cookieName, ttl, getPayload, getEntity }) {
     res.clearCookie(cookieName, { ...cookieOptions(), maxAge: undefined });
   }
 
-  function require(req, res, next) {
+  function readToken(req) {
     const token = req.cookies ? req.cookies[cookieName] : null;
-    if (!token) {
-      return res.status(401).json({ ok: false, error: 'No autenticado.', code: 'NO_SESSION' });
-    }
+    if (!token) return null;
     try {
-      const payload = jwt.verify(token, config.security.jwtSecret);
-      const entity = getEntity ? getEntity(payload) : payload;
-      req[entity.reqKey] = entity.value;
-      return next();
+      return jwt.verify(token, config.security.jwtSecret);
     } catch {
-      clear(res);
-      return res.status(401).json({ ok: false, error: 'Sesión expirada o inválida.', code: 'BAD_SESSION' });
+      // Token inválido o expirado. NO limpiamos aquí: el caller decide.
+      return null;
     }
   }
 
-  return { issue, clear, require };
+  function require(req, res, next) {
+    const payload = readToken(req);
+    if (!payload) {
+      return res.status(401).json({ ok: false, error: 'No autenticado.', code: 'NO_SESSION' });
+    }
+    const entity = getEntity ? getEntity(payload) : payload;
+    req[entity.reqKey] = entity.value;
+    return next();
+  }
+
+  /** Adjunta la entidad si hay sesión válida; nunca falla. */
+  function optional(req, _res, next) {
+    const payload = readToken(req);
+    if (payload) {
+      const entity = getEntity ? getEntity(payload) : payload;
+      req[entity.reqKey] = entity.value;
+    }
+    return next();
+  }
+
+  return { issue, clear, require, optional };
 }
 
 module.exports = buildSession;

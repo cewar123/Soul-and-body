@@ -25,6 +25,9 @@ function generateReference() {
  * Crea una reserva a partir de datos YA validados y saneados por el middleware.
  * Devuelve { appointment, notifications }.
  *
+ * Si el cliente está autenticado (opcional), la cita se asocia a su cuenta
+ * para que pueda verla en "Mis citas" y cancelarla si necesita.
+ *
  * Detección de carrera: si entre `assertSlotBookable` y el INSERT alguien tomó
  * el bloque, Supabase devuelve error 23505 (unique_violation) sobre el índice
  * parcial `idx_appointments_slot_active` → lo traducimos a SLOT_TAKEN.
@@ -53,6 +56,7 @@ async function createBooking(input, meta = {}) {
         time: timeStr,
         notes: notes || null,
         source_ip: meta.ip || null,
+        customer_id: meta.customerId || null,
       });
     } catch (err) {
       lastError = err;

@@ -11,10 +11,11 @@ const getAvailability = asyncHandler(async (req, res) => {
   res.json({ ok: true, data });
 });
 
-/** Crea una reserva. */
+/** Crea una reserva. Si el cliente está autenticado, se asocia a su cuenta. */
 const createBooking = asyncHandler(async (req, res) => {
   const { appointment, notifications } = await booking.createBooking(req.body, {
     ip: req.ip,
+    customerId: req.customer ? req.customer.id : null,
   });
 
   // Se devuelve solo lo necesario al cliente (no el id interno ni la IP).
