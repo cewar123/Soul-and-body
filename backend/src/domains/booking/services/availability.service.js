@@ -17,7 +17,6 @@ function isWorkingDay(dateStr) {
 
 /**
  * Genera TODOS los bloques teóricos de un día laborable, según su horario.
- * No considera aún ocupación ni hora actual.
  */
 function allSlotsForDate(dateStr) {
   const weekday = time.businessWeekday(dateStr);
@@ -32,7 +31,6 @@ function allSlotsForDate(dateStr) {
   return slots;
 }
 
-/** Valida que la fecha esté dentro del rango permitido para reservar. */
 function assertDateBookable(dateStr) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     throw new DomainError('Fecha con formato inválido.', 'DATE_FORMAT');
@@ -44,7 +42,7 @@ function assertDateBookable(dateStr) {
   if (dateStr > horizon) {
     throw new DomainError(
       `Solo se puede reservar hasta ${bookingHorizonDays} días por adelantado.`,
-      'DATE_HORIZON'
+      'DATE_HORIZON',
     );
   }
   if (!isWorkingDay(dateStr)) {
@@ -53,7 +51,7 @@ function assertDateBookable(dateStr) {
 }
 
 /** Valida que un bloque concreto (date, time) sea reservable. */
-function assertSlotBookable(dateStr, timeStr) {
+async function assertSlotBookable(dateStr, timeStr) {
   assertDateBookable(dateStr);
   if (!/^\d{2}:\d{2}$/.test(timeStr)) {
     throw new DomainError('Hora con formato inválido.', 'TIME_FORMAT');
@@ -63,22 +61,23 @@ function assertSlotBookable(dateStr, timeStr) {
     throw new DomainError('Ese horario no está disponible en el calendario.', 'TIME_INVALID');
   }
   if (time.hoursUntil(dateStr, timeStr) < minLeadTimeHours) {
-    throw new DomainError('La reserva debe hacerse con al menos 2 horas de anticipación.', 'LEAD_TIME');
+    throw new DomainError(
+      'La reserva debe hacerse con al menos 2 horas de anticipación.',
+      'LEAD_TIME',
+    );
   }
-  if (appointmentModel.slotIsTaken(dateStr, timeStr)) {
+  if (await appointmentModel.slotIsTaken(dateStr, timeStr)) {
     throw new DomainError('Ese horario ya está reservado.', 'SLOT_TAKEN');
   }
 }
 
 /**
  * Devuelve la disponibilidad de un día: cada bloque con su estado.
- * Un bloque está disponible si (a) no está ocupado y (b) respeta la
- * anticipación mínima respecto a la hora actual del negocio.
  */
-function getAvailability(dateStr) {
+async function getAvailability(dateStr) {
   assertDateBookable(dateStr);
 
-  const taken = appointmentModel.takenTimes(dateStr);
+  const taken = await appointmentModel.takenTimes(dateStr);
 
   const slots = allSlotsForDate(dateStr).map((slot) => {
     const isTaken = taken.has(slot);
@@ -86,10 +85,7 @@ function getAvailability(dateStr) {
     return { time: slot, available: !isTaken && leadOk };
   });
 
-  return {
-    date: dateStr,
-    slots,
-  };
+  return { date: dateStr, slots };
 }
 
 module.exports = {

@@ -1,7 +1,7 @@
 {
   "name": "soul-and-body-backend",
-  "version": "2.0.0",
-  "description": "Backend del sistema de reservas de Soul and Body — Centro Estético (Wendy de la Hoz, Envigado).",
+  "version": "3.0.0",
+  "description": "Backend del sistema de reservas de Soul and Body — Centro Estético (Wendy de la Hoz, Envigado) — sobre Supabase.",
   "author": "Soul and Body",
   "license": "UNLICENSED",
   "private": true,
@@ -22,8 +22,8 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^11.10.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

@@ -1,31 +1,58 @@
 'use strict';
 
-const db = require('../../db/connection');
+const supabase = require('../../db/connection');
 
 /**
- * Acceso a la tabla `admins`. Todas las consultas usan sentencias preparadas
- * con parámetros vinculados (nunca concatenación de strings), lo que elimina
- * por completo la superficie de SQL injection.
+ * Acceso a la tabla `admins` sobre Supabase.
  */
 
-const stmts = {
-  findByUsername: db.prepare('SELECT * FROM admins WHERE username = ?'),
-  findById: db.prepare('SELECT id, username, created_at FROM admins WHERE id = ?'),
-  insert: db.prepare(
-    'INSERT INTO admins (username, password_hash) VALUES (@username, @password_hash)'
-  ),
-  updatePassword: db.prepare(
-    "UPDATE admins SET password_hash = @password_hash, updated_at = datetime('now') WHERE id = @id"
-  ),
-  count: db.prepare('SELECT COUNT(*) AS n FROM admins'),
-};
+async function findByUsername(username) {
+  const { data, error } = await supabase
+    .from('admins')
+    .select('*')
+    .eq('username', username)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function findById(id) {
+  const { data, error } = await supabase
+    .from('admins')
+    .select('id, username, created_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function create({ username, passwordHash }) {
+  const { error } = await supabase
+    .from('admins')
+    .insert({ username, password_hash: passwordHash });
+  if (error) throw error;
+}
+
+async function updatePassword({ id, passwordHash }) {
+  const { error } = await supabase
+    .from('admins')
+    .update({ password_hash: passwordHash })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+async function count() {
+  const { count, error } = await supabase
+    .from('admins')
+    .select('id', { count: 'exact', head: true });
+  if (error) throw error;
+  return count || 0;
+}
 
 module.exports = {
-  findByUsername: (username) => stmts.findByUsername.get(username),
-  findById: (id) => stmts.findById.get(id),
-  create: ({ username, passwordHash }) =>
-    stmts.insert.run({ username, password_hash: passwordHash }),
-  updatePassword: ({ id, passwordHash }) =>
-    stmts.updatePassword.run({ id, password_hash: passwordHash }),
-  count: () => stmts.count.get().n,
+  findByUsername,
+  findById,
+  create,
+  updatePassword,
+  count,
 };

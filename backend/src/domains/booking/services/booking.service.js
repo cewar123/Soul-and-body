@@ -24,6 +24,10 @@ function generateReference() {
 /**
  * Crea una reserva a partir de datos YA validados y saneados por el middleware.
  * Devuelve { appointment, notifications }.
+ *
+ * Detección de carrera: si entre `assertSlotBookable` y el INSERT alguien tomó
+ * el bloque, Supabase devuelve error 23505 (unique_violation) sobre el índice
+ * parcial `idx_appointments_slot_active` → lo traducimos a SLOT_TAKEN.
  */
 async function createBooking(input, meta = {}) {
   const { name, phone, email, service, date, time: timeStr, notes } = input;
@@ -32,15 +36,14 @@ async function createBooking(input, meta = {}) {
     throw new DomainError('El servicio seleccionado no es válido.', 'SERVICE_INVALID');
   }
 
-  // Regla de negocio: día/hora deben ser reservables (fecha, horario, ocupación).
-  availability.assertSlotBookable(date, timeStr);
+  await availability.assertSlotBookable(date, timeStr);
 
-  // Se reintenta solo ante una colisión de código de referencia (extremadamente raro).
   let appointment = null;
+  let lastError = null;
   for (let attempt = 0; attempt < 5 && !appointment; attempt += 1) {
     const reference = generateReference();
     try {
-      appointment = appointmentModel.create({
+      appointment = await appointmentModel.create({
         reference,
         name,
         phone,
@@ -52,15 +55,16 @@ async function createBooking(input, meta = {}) {
         source_ip: meta.ip || null,
       });
     } catch (err) {
-      // Índice único parcial: alguien tomó el bloque entre la validación y el insert.
-      if (String(err.message).includes('idx_appointments_slot_active')) {
+      lastError = err;
+      // Carrera: alguien tomó el bloque entre la validación y el insert.
+      if (err.code === '23505' && /idx_appointments_slot_active/.test(err.message || '')) {
         throw new DomainError(
           'Ese horario acaba de ser reservado. Elige otro, por favor.',
-          'SLOT_TAKEN'
+          'SLOT_TAKEN',
         );
       }
       // Colisión de reference (UNIQUE): reintentar con otro código.
-      if (String(err.message).includes('appointments.reference')) {
+      if (err.code === '23505' && /appointments_reference_key/.test(err.message || '')) {
         continue;
       }
       throw err;
@@ -68,14 +72,15 @@ async function createBooking(input, meta = {}) {
   }
 
   if (!appointment) {
-    throw new Error('No se pudo generar un código de reserva único.');
+    throw new Error(
+      `No se pudo generar un código de reserva único: ${lastError ? lastError.message : 'desconocido'}`,
+    );
   }
 
   logger.info(
-    `Reserva creada ${appointment.reference} — ${serviceLabel(service)} ${date} ${timeStr}`
+    `Reserva creada ${appointment.reference} — ${serviceLabel(service)} ${date} ${timeStr}`,
   );
 
-  // Notificaciones best-effort: nunca deben tumbar la reserva.
   let notifications = { owner: false, client: false, enabled: false };
   try {
     notifications = await emailService.sendBookingNotifications(appointment);

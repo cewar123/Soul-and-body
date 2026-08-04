@@ -38,9 +38,13 @@ const config = {
   port: parseInt(process.env.PORT, 10) || 3000,
   publicUrl: (process.env.PUBLIC_URL || 'http://localhost:3000').replace(/\/$/, ''),
 
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  },
+
   security: {
     jwtSecret: required('JWT_SECRET', randomSecret),
-    csrfSecret: required('CSRF_SECRET', randomSecret),
     sessionTtl: process.env.SESSION_TTL || '8h',
   },
 

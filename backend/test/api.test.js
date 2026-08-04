@@ -1,12 +1,10 @@
 'use strict';
 
-const test = require('node:test');
 const assert = require('node:assert/strict');
-const bcrypt = require('bcryptjs');
-const { withFreshApp } = require('./helpers');
+const { withFreshApp, test } = require('./helpers');
 
-test('GET /api/health responde ok', async () => {
-  await withFreshApp(async ({ app, request }) => {
+test('GET /api/health responde ok', async (t) => {
+  await withFreshApp(t, async ({ app, request }) => {
     const res = await request(app).get('/api/health');
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
@@ -15,8 +13,8 @@ test('GET /api/health responde ok', async () => {
   });
 });
 
-test('GET /api/config devuelve brand, servicios y whatsapp', async () => {
-  await withFreshApp(async ({ app, request, config }) => {
+test('GET /api/config devuelve brand, servicios y whatsapp', async (t) => {
+  await withFreshApp(t, async ({ app, request, config }) => {
     const res = await request(app).get('/api/config');
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
@@ -29,30 +27,28 @@ test('GET /api/config devuelve brand, servicios y whatsapp', async () => {
   });
 });
 
-test('GET /api/csrf-token emite token y cookie', async () => {
-  await withFreshApp(async ({ app, request }) => {
+test('GET /api/csrf-token emite token y cookie', async (t) => {
+  await withFreshApp(t, async ({ app, request }) => {
     const res = await request(app).get('/api/csrf-token');
     assert.equal(res.status, 200);
     assert.equal(res.body.ok, true);
     assert.ok(typeof res.body.csrfToken === 'string');
     assert.ok(res.body.csrfToken.length >= 32);
-    // La cookie sb_csrf debe estar presente
     const cookies = res.headers['set-cookie'] || [];
     assert.ok(cookies.some((c) => c.startsWith('sb_csrf=')));
   });
 });
 
-test('GET /api/availability con fecha inválida responde 422', async () => {
-  await withFreshApp(async ({ app, request }) => {
+test('GET /api/availability con fecha inválida responde 422', async (t) => {
+  await withFreshApp(t, async ({ app, request }) => {
     const res = await request(app).get('/api/availability?date=no-es-fecha');
     assert.equal(res.status, 422);
     assert.equal(res.body.code, 'VALIDATION');
   });
 });
 
-test('GET /api/availability con fecha en domingo (cerrado) responde 400', async () => {
-  await withFreshApp(async ({ app, request }) => {
-    // Buscar un domingo futuro.
+test('GET /api/availability con fecha en domingo (cerrado) responde 400', async (t) => {
+  await withFreshApp(t, async ({ app, request }) => {
     const time = require('../src/lib/time');
     const today = time.getBusinessNowParts().dateStr;
     let sunday = today;
@@ -66,8 +62,8 @@ test('GET /api/availability con fecha en domingo (cerrado) responde 400', async 
   });
 });
 
-test('POST /api/bookings sin CSRF es rechazado con 403', async () => {
-  await withFreshApp(async ({ app, request }) => {
+test('POST /api/bookings sin CSRF es rechazado con 403', async (t) => {
+  await withFreshApp(t, async ({ app, request }) => {
     const res = await request(app)
       .post('/api/bookings')
       .send({
@@ -82,9 +78,8 @@ test('POST /api/bookings sin CSRF es rechazado con 403', async () => {
   });
 });
 
-test('POST /api/auth/login con credenciales incorrectas responde 401', async () => {
-  await withFreshApp(async ({ app, request }) => {
-    // Obtener CSRF
+test('POST /api/auth/login con credenciales incorrectas responde 401', async (t) => {
+  await withFreshApp(t, async ({ app, request }) => {
     const csrfRes = await request(app).get('/api/csrf-token');
     const csrfToken = csrfRes.body.csrfToken;
     const csrfCookie = csrfRes.headers['set-cookie'].find((c) => c.startsWith('sb_csrf='));
@@ -100,52 +95,24 @@ test('POST /api/auth/login con credenciales incorrectas responde 401', async () 
   });
 });
 
-test('El seed crea el admin y permite login correcto', async () => {
-  await withFreshApp(async ({ app, request }) => {
-    // Crear admin manualmente (el seed lo haría en producción).
-    const db = require('../src/db/connection');
-    const hash = bcrypt.hashSync('TestPass123!', 4);
-    db.prepare('INSERT INTO admins (username, password_hash) VALUES (?, ?)').run('testadmin', hash);
-
-    // CSRF
-    const csrfRes = await request(app).get('/api/csrf-token');
-    const csrfToken = csrfRes.body.csrfToken;
-    const csrfCookie = csrfRes.headers['set-cookie'].find((c) => c.startsWith('sb_csrf='));
-
-    const res = await request(app)
-      .post('/api/auth/login')
-      .set('Cookie', csrfCookie)
-      .set('x-csrf-token', csrfToken)
-      .send({ username: 'testadmin', password: 'TestPass123!' });
-
-    assert.equal(res.status, 200);
-    assert.equal(res.body.ok, true);
-    assert.equal(res.body.data.username, 'testadmin');
-
-    // La cookie sb_session debe estar presente.
-    const cookies = res.headers['set-cookie'] || [];
-    assert.ok(cookies.some((c) => c.startsWith('sb_session=')));
-  });
-});
-
-test('GET /api/auth/me sin sesión responde 401', async () => {
-  await withFreshApp(async ({ app, request }) => {
+test('GET /api/auth/me sin sesión responde 401', async (t) => {
+  await withFreshApp(t, async ({ app, request }) => {
     const res = await request(app).get('/api/auth/me');
     assert.equal(res.status, 401);
     assert.equal(res.body.code, 'NO_SESSION');
   });
 });
 
-test('GET /api/admin/appointments sin sesión responde 401', async () => {
-  await withFreshApp(async ({ app, request }) => {
+test('GET /api/admin/appointments sin sesión responde 401', async (t) => {
+  await withFreshApp(t, async ({ app, request }) => {
     const res = await request(app).get('/api/admin/appointments');
     assert.equal(res.status, 401);
     assert.equal(res.body.code, 'NO_SESSION');
   });
 });
 
-test('POST /api/customer/register con body incompleto responde 422', async () => {
-  await withFreshApp(async ({ app, request }) => {
+test('POST /api/customer/register con body incompleto responde 422', async (t) => {
+  await withFreshApp(t, async ({ app, request }) => {
     const res = await request(app)
       .post('/api/customer/register')
       .send({ email: 'no-es-email' });

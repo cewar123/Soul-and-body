@@ -1,128 +1,147 @@
 'use strict';
 
-const db = require('../../../db/connection');
+const supabase = require('../../../db/connection');
 const { activeStatuses } = require('../../../config').business;
 
 /**
- * Acceso a la tabla `appointments`. Todas las consultas usan sentencias preparadas
- * con parámetros vinculados (nunca concatenación de strings), lo que elimina
- * por completo la superficie de SQL injection.
+ * Acceso a la tabla `appointments` sobre Supabase (PostgreSQL).
+ * Todas las consultas pasan por el cliente JS con service_role.
+ * El índice único parcial `idx_appointments_slot_active` se define en
+ * schema.sql y evita dos reservas activas en el mismo bloque.
  */
-
-// Marcadores dinámicos para la lista de estados "activos" (?, ?...).
-const activePlaceholders = activeStatuses.map(() => '?').join(', ');
-
-const stmts = {
-  insert: db.prepare(`
-    INSERT INTO appointments (reference, name, phone, email, service, date, time, notes, source_ip)
-    VALUES (@reference, @name, @phone, @email, @service, @date, @time, @notes, @source_ip)
-  `),
-  byId: db.prepare('SELECT * FROM appointments WHERE id = ?'),
-  byReference: db.prepare('SELECT * FROM appointments WHERE reference = ?'),
-  takenTimesForDate: db.prepare(`
-    SELECT time FROM appointments
-    WHERE date = ? AND status IN (${activePlaceholders})
-  `),
-  updateStatus: db.prepare(
-    'UPDATE appointments SET status = @status WHERE id = @id'
-  ),
-  existsActiveSlot: db.prepare(`
-    SELECT 1 FROM appointments
-    WHERE date = ? AND time = ? AND status IN (${activePlaceholders})
-    LIMIT 1
-  `),
-};
 
 /**
- * Inserta una cita. La unicidad del bloque (día+hora activo) está garantizada
- * por un índice único parcial en la BD, así que una carrera entre dos reservas
- * simultáneas lanzará un error SQLITE_CONSTRAINT que capturamos arriba.
+ * Inserta una cita. El índice único parcial garantiza que una carrera entre
+ * dos reservas simultáneas falle con un error que capturamos arriba.
  */
-function create(data) {
-  const info = stmts.insert.run(data);
-  return stmts.byId.get(info.lastInsertRowid);
+async function create(data) {
+  const { data: row, error } = await supabase
+    .from('appointments')
+    .insert({
+      reference: data.reference,
+      name: data.name,
+      phone: data.phone,
+      email: data.email,
+      service: data.service,
+      date: data.date,
+      time: data.time,
+      notes: data.notes,
+      source_ip: data.source_ip,
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return row;
 }
 
-function findById(id) {
-  return stmts.byId.get(id);
+async function findById(id) {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
-function findByReference(reference) {
-  return stmts.byReference.get(reference);
+async function findByReference(reference) {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('*')
+    .eq('reference', reference)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 /** Devuelve un Set con las horas "HH:MM" ya ocupadas en una fecha. */
-function takenTimes(dateStr) {
-  const rows = stmts.takenTimesForDate.all(dateStr, ...activeStatuses);
-  return new Set(rows.map((r) => r.time));
+async function takenTimes(dateStr) {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('time')
+    .eq('date', dateStr)
+    .in('status', activeStatuses);
+  if (error) throw error;
+  return new Set((data || []).map((r) => r.time));
 }
 
-function slotIsTaken(dateStr, timeStr) {
-  return Boolean(stmts.existsActiveSlot.get(dateStr, timeStr, ...activeStatuses));
+async function slotIsTaken(dateStr, timeStr) {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select('id')
+    .eq('date', dateStr)
+    .eq('time', timeStr)
+    .in('status', activeStatuses)
+    .limit(1);
+  if (error) throw error;
+  return (data || []).length > 0;
 }
 
-function updateStatus(id, status) {
-  return stmts.updateStatus.run({ id, status });
+async function updateStatus(id, status) {
+  const { data, error } = await supabase
+    .from('appointments')
+    .update({ status })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 /**
- * Listado para el panel admin, con filtros opcionales. Se construye la cláusula
- * WHERE de forma segura vinculando parámetros (sin interpolar valores).
+ * Listado para el panel admin, con filtros opcionales.
+ * `q` busca en name/phone/email/reference con LIKE %x% (ilike en PG).
  */
-function list({ status, date, from, to, q, limit = 200, offset = 0 } = {}) {
-  const where = [];
-  const params = [];
-
-  if (status) {
-    where.push('status = ?');
-    params.push(status);
-  }
-  if (date) {
-    where.push('date = ?');
-    params.push(date);
-  }
-  if (from) {
-    where.push('date >= ?');
-    params.push(from);
-  }
-  if (to) {
-    where.push('date <= ?');
-    params.push(to);
-  }
+async function list({ status, date, from, to, q, limit = 200, offset = 0 } = {}) {
+  const pageSize = Math.min(Number(limit) || 200, 500);
+  let query = supabase.from('appointments').select('*');
+  if (status) query = query.eq('status', status);
+  if (date) query = query.eq('date', date);
+  if (from) query = query.gte('date', from);
+  if (to) query = query.lte('date', to);
   if (q) {
-    where.push('(name LIKE ? OR phone LIKE ? OR email LIKE ? OR reference LIKE ?)');
     const like = `%${q}%`;
-    params.push(like, like, like, like);
+    query = query.or(
+      `name.ilike.${like},phone.ilike.${like},email.ilike.${like},reference.ilike.${like}`,
+    );
   }
-
-  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  const sql = `
-    SELECT * FROM appointments
-    ${clause}
-    ORDER BY date ASC, time ASC
-    LIMIT ? OFFSET ?
-  `;
-  params.push(Math.min(Number(limit) || 200, 500), Number(offset) || 0);
-  return db.prepare(sql).all(...params);
+  query = query
+    .order('date', { ascending: true })
+    .order('time', { ascending: true })
+    .range(offset, offset + pageSize - 1);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
 }
 
 /** Métricas rápidas para el dashboard. */
-function stats(todayStr) {
-  const total = db.prepare('SELECT COUNT(*) AS n FROM appointments').get().n;
-  const pending = db
-    .prepare("SELECT COUNT(*) AS n FROM appointments WHERE status = 'pending'")
-    .get().n;
-  const upcoming = db
-    .prepare(
-      "SELECT COUNT(*) AS n FROM appointments WHERE date >= ? AND status IN ('pending','confirmed')"
-    )
-    .get(todayStr).n;
-  const today = db
-    .prepare(
-      "SELECT COUNT(*) AS n FROM appointments WHERE date = ? AND status IN ('pending','confirmed')"
-    )
-    .get(todayStr).n;
-  return { total, pending, upcoming, today };
+async function stats(todayStr) {
+  const [total, pending, upcoming, today] = await Promise.all([
+    supabase.from('appointments').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .gte('date', todayStr)
+      .in('status', activeStatuses),
+    supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('date', todayStr)
+      .in('status', activeStatuses),
+  ]);
+  for (const r of [total, pending, upcoming, today]) {
+    if (r.error) throw r.error;
+  }
+  return {
+    total: total.count || 0,
+    pending: pending.count || 0,
+    upcoming: upcoming.count || 0,
+    today: today.count || 0,
+  };
 }
 
 module.exports = {

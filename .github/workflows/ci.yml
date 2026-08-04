@@ -29,15 +29,55 @@ jobs:
         working-directory: backend
         run: npm run lint
 
-      - name: Test
+      - name: Test (puros, sin BD)
         working-directory: backend
         run: npm test
         env:
           NODE_ENV: test
+          # Las variables de Supabase NO se setean en CI: los tests que
+          # tocan BD se saltan automáticamente. Para correr la suite
+          # completa, configura los secrets SUPABASE_URL y
+          # SUPABASE_SERVICE_ROLE_KEY en el repo (Settings → Secrets).
           JWT_SECRET: ci-test-jwt-secret-very-long-and-random-aaaaaaaaaaaaaa
-          CSRF_SECRET: ci-test-csrf-secret-very-long-and-random-bbbbbbbbbb
           ADMIN_USERNAME: ciadmin
           ADMIN_PASSWORD: CIPass123!
           BUSINESS_TZ: America/Bogota
           BUSINESS_WHATSAPP: 573136147706
           PUBLIC_URL: http://localhost:3000
+
+  backend-integration:
+    name: Backend · integration (Supabase)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    # Solo corre en push a main Y si el repo tiene los secrets configurados.
+    # Si no, se omite silenciosamente para no romper PRs de forks.
+    continue-on-error: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Test (integración con Supabase)
+        working-directory: backend
+        run: npm test
+        env:
+          NODE_ENV: test
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          JWT_SECRET: ci-test-jwt-secret-very-long-and-random-aaaaaaaaaaaaaa
+          ADMIN_USERNAME: ciadmin
+          ADMIN_PASSWORD: CIPass123!
+          BUSINESS_TZ: America/Bogota
+          BUSINESS_WHATSAPP: 573136147706
+          PUBLIC_URL: http://localhost:3000
+

@@ -26,11 +26,11 @@ const register = [
     const { email, password, name, phone } = req.body;
     const lowerEmail = email.toLowerCase();
 
-    if (customerModel.findByEmail(lowerEmail)) {
+    if (await customerModel.findByEmail(lowerEmail)) {
       throw new DomainError('Ya existe una cuenta con ese email.', 'EMAIL_EXISTS');
     }
 
-    const customer = customerModel.create({
+    const customer = await customerModel.create({
       email: lowerEmail,
       password,
       name: name.trim(),
@@ -51,7 +51,7 @@ const login = [
   handleValidation,
   asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-    const customer = customerModel.findByEmail(email.toLowerCase());
+    const customer = await customerModel.findByEmail(email.toLowerCase());
     if (!customer || !customerModel.verifyPassword(customer, password)) {
       // Mismo error genérico para no revelar si el email existe.
       throw new DomainError('Credenciales inválidas.', 'BAD_CREDENTIALS');
@@ -81,12 +81,12 @@ const updateProfile = [
     const { name, phone } = req.body;
     if (!name) throw new DomainError('El nombre es obligatorio.', 'VALIDATION');
 
-    customerModel.updateProfile({
+    await customerModel.updateProfile({
       id: req.customer.id,
       name: name.trim(),
       phone: phone?.trim() || null,
     });
-    const updated = customerModel.findById(req.customer.id);
+    const updated = await customerModel.findById(req.customer.id);
     res.json({ ok: true, data: updated });
   }),
 ];
@@ -98,12 +98,12 @@ const changePassword = [
   asyncHandler(async (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
-    const customer = customerModel.findById(req.customer.id);
+    const customer = await customerModel.findById(req.customer.id);
     if (!customer || !customerModel.verifyPassword(customer, currentPassword)) {
       throw new DomainError('La contraseña actual no es correcta.', 'BAD_CREDENTIALS');
     }
 
-    customerModel.updatePassword({ id: req.customer.id, password: newPassword });
+    await customerModel.updatePassword({ id: req.customer.id, password: newPassword });
     res.json({ ok: true });
   }),
 ];

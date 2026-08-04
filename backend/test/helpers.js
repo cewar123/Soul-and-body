@@ -2,74 +2,39 @@
 
 /**
  * Helpers para tests:
- * - Crea una app de Express con un archivo de BD temporal.
- * - Usa supertest para llamadas HTTP en proceso (sin puerto real).
- * - `withFreshApp(fn)` ejecuta `fn(app, agent, config)` y limpia después.
+ * - `withFreshApp(fn)` ejecuta la suite con la app de Express en proceso.
+ * - Si SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY están configuradas, los tests
+ *   tocan la BD real (idealmente un proyecto de Supabase separado).
+ * - Si no, los tests que necesitan BD se saltan con `t.skip` para que
+ *   `npm test` siga siendo ejecutable en CI sin credenciales.
  */
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+const request = require('supertest');
+const { test } = require('node:test');
 
-function isolateEnv() {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sb-test-'));
-  const dataDir = path.join(tmp, 'data');
-  fs.mkdirSync(dataDir, { recursive: true });
-
-  // Variables estables para esta suite de tests.
-  process.env.NODE_ENV = 'test';
-  process.env.JWT_SECRET = 'a'.repeat(64);
-  process.env.CSRF_SECRET = 'b'.repeat(64);
-  process.env.ADMIN_USERNAME = 'testadmin';
-  process.env.ADMIN_PASSWORD = 'TestPass123!';
-  process.env.BUSINESS_TZ = 'America/Bogota';
-  process.env.BUSINESS_WHATSAPP = '573136147706';
-  process.env.PUBLIC_URL = 'http://localhost';
-
-  return { tmp, dataDir };
+function hasSupabase() {
+  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-function clearRequireCache() {
+async function loadApp() {
+  // Re-cargar la app con el env actual (test ya establece las variables).
   for (const key of Object.keys(require.cache)) {
     if (
-      key.includes(`${path.sep}backend${path.sep}src${path.sep}`) ||
-      key.includes(`${path.sep}backend${path.sep}test${path.sep}`)
+      key.includes(`${require('path').sep}backend${require('path').sep}src${require('path').sep}`)
     ) {
       delete require.cache[key];
     }
   }
+  return require('../src/app');
 }
 
-function loadApp(dataDir) {
-  clearRequireCache();
-  const config = require('../src/config');
-  config.paths.dataDir = dataDir;
-  config.paths.dbFile = path.join(dataDir, 'test.db');
-
-  // Crea la BD de cero.
-  require('../src/db/migrate')();
-  const app = require('../src/app');
-  return { app, config };
-}
-
-function cleanup(tmp) {
-  try {
-    fs.rmSync(tmp, { recursive: true, force: true });
-  } catch {
-    /* ignore */
+async function withFreshApp(t, fn) {
+  if (!hasSupabase()) {
+    t.skip('Tests de integración requieren SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY.');
+    return;
   }
+  const app = await loadApp();
+  await fn({ app, request });
 }
 
-async function withFreshApp(fn) {
-  const { tmp, dataDir } = isolateEnv();
-  try {
-    const { app, config } = loadApp(dataDir);
-    // supertest se aplica sobre la app directamente.
-    const request = require('supertest');
-    await fn({ app, request, config, dataDir });
-  } finally {
-    cleanup(tmp);
-  }
-}
-
-module.exports = { withFreshApp, isolateEnv, loadApp, cleanup };
+module.exports = { withFreshApp, hasSupabase, test };

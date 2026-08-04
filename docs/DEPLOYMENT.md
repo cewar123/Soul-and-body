@@ -1,105 +1,131 @@
-# Guía de despliegue — Soul and Body
+# Despliegue — Soul and Body (Supabase)
 
-Esta guía explica cómo poner el sitio en producción con un dominio real y HTTPS.
-El proyecto es un servidor Node estándar que sirve tanto la API como el frontend,
-así que se despliega como cualquier app de Node.
+Guía rápida para poner el sistema en producción usando **Supabase** como
+base de datos y **Render/Railway/Fly.io** para el backend Node.
+
+Para la configuración inicial de Supabase, ver [`docs/SUPABASE.md`](SUPABASE.md).
 
 ---
 
-## 1. Preparar las variables de entorno
-
-En el servidor de producción define estas variables (no subas el `.env` al repo):
+## Resumen de la arquitectura
 
 ```
-NODE_ENV=production
-PORT=3000                       # o el que asigne el proveedor
-PUBLIC_URL=https://tudominio.com
-JWT_SECRET=<64+ caracteres aleatorios>
-CSRF_SECRET=<64+ caracteres aleatorios>
-ADMIN_USERNAME=wendy
-ADMIN_PASSWORD=<contraseña fuerte, solo para el primer seed>
-BUSINESS_TZ=America/Bogota
-BUSINESS_EMAIL=correo-del-negocio@gmail.com
-BUSINESS_WHATSAPP=573136147706
-# SMTP (ver sección 3)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=correo-del-negocio@gmail.com
-SMTP_PASS=<contraseña de aplicación de Gmail>
-MAIL_FROM_NAME=Soul and Body
-MAIL_FROM_EMAIL=correo-del-negocio@gmail.com
+Visitante → GitHub Pages (frontend estático)
+                │  fetch()
+                ▼
+         Render/Railway (backend Node + Express)
+                │  cliente Supabase (service_role)
+                ▼
+            Supabase (PostgreSQL)
 ```
 
-Genera los secretos con:
+---
 
+## 1. Variables de entorno del backend
+
+En el servicio donde despliegues el backend (Render, Railway, etc.) configura:
+
+| Variable                     | Descripción                                                 |
+|------------------------------|-------------------------------------------------------------|
+| `NODE_ENV`                   | `production`                                                 |
+| `PORT`                       | El que asigne el proveedor (Render lo define solo)          |
+| `PUBLIC_URL`                 | `https://api.tudominio.com` (sin barra final)               |
+| `SUPABASE_URL`               | Project URL de Supabase (Settings → API)                    |
+| `SUPABASE_SERVICE_ROLE_KEY`  | service_role key (NO la anon) — Settings → API              |
+| `JWT_SECRET`                 | 64+ caracteres aleatorios                                   |
+| `ADMIN_USERNAME`             | `wendy`                                                     |
+| `ADMIN_PASSWORD`             | Contraseña fuerte, solo para el primer seed                 |
+| `BUSINESS_TZ`                | `America/Bogota`                                            |
+| `BUSINESS_EMAIL`             | Correo de notificaciones                                    |
+| `BUSINESS_WHATSAPP`          | `573136147706`                                              |
+| `SMTP_*`                     | Opcional, para envío de correos (ver SUPABASE.md)            |
+
+Generar `JWT_SECRET`:
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-> En producción, si falta `JWT_SECRET` o `CSRF_SECRET`, el servidor **no arranca**
-> a propósito (evita correr en un estado inseguro).
+---
+
+## 2. Render (recomendado, plan free)
+
+1. Conecta el repo de GitHub en <https://render.com>.
+2. **New Web Service** → selecciona el repo.
+3. Configuración:
+   - **Root directory**: `backend`
+   - **Build command**: `npm install`
+   - **Start command**: `npm run setup && npm start`
+   - **Health check path**: `/api/health`
+4. **Environment** → añade todas las variables de la sección 1.
+5. **Deploy**.
+
+URL resultante: `https://soul-and-body-api.onrender.com`.
+
+> El plan Free de Render duerme la instancia tras 15 min sin uso; el primer
+> request tarda ~30s. Para producción real, plan de pago (~$7/mes).
 
 ---
 
-## 2. Desplegar en Render o Railway (recomendado)
+## 3. Railway (alternativa)
 
-Ambos permiten desplegar un repo de Node en minutos. Configuración:
+1. Conecta el repo en <https://railway.app>.
+2. **New Project → Deploy from GitHub** → selecciona el repo.
+3. Configura Root: `backend`, Start: `npm run setup && npm start`.
+4. Variables de entorno: mismas que Render.
+5. **Deploy**.
 
-- **Root directory**: `backend`
-- **Build command**: `npm install`
-- **Start command**: `npm run setup && npm start`
-  (el `setup` crea la base de datos y el admin en el primer arranque; es idempotente)
-- **Variables de entorno**: las de la sección 1.
-
-### Persistencia de la base de datos
-SQLite guarda los datos en `backend/data/soul-and-body.db`. En plataformas con
-disco efímero, **monta un disco persistente** apuntando a la carpeta `backend/data`
-para no perder las reservas entre despliegues:
-
-- **Render**: añade un *Persistent Disk* montado en `/opt/render/project/src/backend/data`.
-- **Railway**: añade un *Volume* montado en la ruta equivalente de `backend/data`.
-
-### HTTPS y cookies
-En producción (`NODE_ENV=production`) las cookies se marcan como `secure` y el
-servidor confía en 1 proxy (`trust proxy`). Render y Railway ya terminan TLS por
-ti, así que basta con acceder por `https://`.
+Railway da $5 USD de crédito/mes, suficiente para una instancia pequeña
+incluso con 24/7 uptime.
 
 ---
 
-## 3. Correo con Gmail (contraseña de aplicación)
+## 4. Fly.io (con disco persistente para SQLite si vuelves a ese esquema)
 
-El envío de correos es **opcional**: sin SMTP, las reservas se guardan igual y se
-gestionan desde el panel. Para activarlo con Gmail:
-
-1. Activa la **verificación en dos pasos** en la cuenta de Gmail.
-2. Entra a <https://myaccount.google.com/apppasswords> y crea una
-   **contraseña de aplicación** (16 caracteres).
-3. Pon esa contraseña en `SMTP_PASS` (no la contraseña normal de la cuenta).
-4. Reinicia el servidor. En el arranque verás en los logs:
-   `SMTP verificado: el envío de correos está activo.`
-
-> Para volumen alto de correos conviene un proveedor transaccional (Resend,
-> SendGrid, Mailgun). Basta cambiar las variables `SMTP_*`.
+1. Instala flyctl: <https://fly.io/docs/hands-on/install-flyctl/>.
+2. `fly launch` en el directorio `backend/`.
+3. `fly secrets set SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=...` (etc.)
+4. `fly deploy`.
 
 ---
 
-## 4. Dominio
+## 5. Frontend en GitHub Pages
 
-1. Compra el dominio (ej. en Namecheap, GoDaddy, Google Domains).
-2. En el proveedor de hosting, añade el dominio personalizado.
-3. Crea el registro DNS que indique la plataforma (normalmente un `CNAME`).
-4. Actualiza `PUBLIC_URL` y el `<link rel="canonical">` de `frontend/index.html`
-   con el dominio final.
+### Opción A — Rama `gh-pages` (simple)
+
+1. En GitHub: **Settings → Pages → Build from branch → `gh-pages` → `/ (root)`**.
+2. Workflow de GitHub Actions que publique `frontend/` en esa rama (ver
+   `.github/workflows/pages.yml` si existe, o crearlo).
+
+### Opción B — `/docs` folder
+
+1. Copiar el contenido de `frontend/` a `/docs` en la rama `main`.
+2. **Settings → Pages → branch `main` → `/docs`**.
+
+### Editar `<meta name="api-base">` en `index.html` y `admin.html`
+
+```html
+<meta name="api-base" content="https://soul-and-body-api.onrender.com/api" />
+```
 
 ---
 
-## 5. Checklist previo a entregar al cliente
+## 6. HTTPS y dominio custom
+
+- Render y Railway: HTTPS automático con dominios `*.onrender.com` / `*.up.railway.app`.
+- Dominio custom: en el proveedor, añadir el CNAME y luego en el DNS del
+  dominio crear el registro que indique el proveedor.
+
+---
+
+## 7. Checklist final
 
 - [ ] `NODE_ENV=production` y secretos fuertes configurados.
-- [ ] Contraseña del admin cambiada; `ADMIN_PASSWORD` retirada del entorno tras el seed.
-- [ ] Disco persistente montado para `backend/data`.
+- [ ] `JWT_SECRET` rotado (no es el del `.env.example`).
+- [ ] `ADMIN_PASSWORD` cambiado tras el primer login y borrado de `.env`.
+- [ ] Supabase tiene las 3 tablas y los índices/constraints correctos.
 - [ ] SMTP verificado (o decisión consciente de operar solo con panel + WhatsApp).
-- [ ] `BUSINESS_WHATSAPP`, horarios y servicios revisados en `config/business.js`.
-- [ ] Fotos reales de antes/después y de los tratamientos (reemplazar placeholders).
+- [ ] `BUSINESS_WHATSAPP`, horarios y servicios revisados en
+      [`backend/src/config/business.js`](../backend/src/config/business.js).
+- [ ] `<meta name="api-base">` apunta al backend público.
+- [ ] Robots y sitemap actualizados con el dominio real.
 - [ ] Prueba de humo: crear una reserva real y verla en el panel.

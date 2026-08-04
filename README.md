@@ -2,8 +2,8 @@
 
 Aplicación web completa para **Soul and Body**, el centro estético de
 Wendy de la Hoz en Envigado (Antioquia). Incluye la página pública con
-un asistente de reserva real, un backend con persistencia en base de
-datos y un panel de administración protegido.
+un asistente de reserva real, un backend con persistencia en **Supabase
+(PostgreSQL)** y un panel de administración protegido.
 
 ---
 
@@ -11,17 +11,15 @@ datos y un panel de administración protegido.
 
 - **Asistente de reserva en 4 pasos**: servicio → día y hora → datos → confirmación.
 - **Disponibilidad real**: solo se ofrecen horarios libres; imposible reservar dos
-  veces el mismo bloque (garantizado a nivel de base de datos).
-- **Persistencia real** en SQLite (fácil de migrar a PostgreSQL).
+  veces el mismo bloque (índice único parcial en PostgreSQL).
+- **Persistencia en Supabase** (PostgreSQL gestionado, free tier generoso).
 - **Panel de administración** con login, métricas, filtros, búsqueda y cambio de
   estado de las citas.
-- **Notificaciones por correo** a la clienta y al negocio (opcional, se activa con
-  credenciales SMTP; el sistema funciona igual sin ellas).
-- **Confirmación por WhatsApp** con mensaje prellenado (click-to-chat, sin costos).
-- **Frontend desplegable a GitHub Pages** (HTML estático sin build).
-- **Seguridad de nivel producción**: Helmet + CSP, CSRF, rate limiting, validación
-  y saneamiento, consultas parametrizadas, bcrypt 12 rounds, JWT en cookies httpOnly,
-  honeypot anti-bot.
+- **Notificaciones por correo** a la clienta y al negocio (opcional, SMTP).
+- **Confirmación por WhatsApp** con mensaje prellenado (click-to-chat).
+- **Frontend en GitHub Pages** (HTML estático, sin build).
+- **Seguridad de nivel producción**: Helmet + CSP, CSRF, rate limiting, bcrypt
+  12 rounds, JWT en cookies httpOnly, honeypot anti-bot.
 - **WCAG 2.1 AA** en lo esencial: skip-link, contraste, ARIA, focus management.
 - **SEO completo**: Open Graph, Twitter Card, JSON-LD `LocalBusiness`, geo meta,
   robots.txt, sitemap.xml, manifest.
@@ -34,17 +32,16 @@ datos y un panel de administración protegido.
 |-------------|-----------------------------------------------------------|
 | Frontend    | HTML5 + CSS3 + ES Modules (sin frameworks, sin build)     |
 | Backend     | Node 20 + Express 4                                       |
-| Base datos  | SQLite (`better-sqlite3`) — precompilado, sin compilador   |
+| Base datos  | **Supabase** (PostgreSQL gestionado)                      |
 | Seguridad   | Helmet, express-rate-limit, express-validator, JWT, bcrypt|
 | Correo      | Nodemailer (SMTP) opcional                                |
 | Tests       | `node --test` + supertest                                 |
 | Lint        | ESLint v9 flat config                                     |
-| CI          | GitHub Actions (lint + test)                              |
+| CI          | GitHub Actions (lint + test + integration)                |
 
-> **¿Por qué SQLite?** Para un negocio de una sede es la opción más robusta y
-> simple: cero servicios externos, cero configuración, respaldos = copiar un
-> archivo. La capa de datos está aislada en `models/`, así que migrar a
-> PostgreSQL más adelante es directo.
+> **¿Por qué Supabase?** PostgreSQL real, dashboard visual, backups, free
+> tier generoso (500 MB) y sin运维. La capa de datos está aislada en
+> `models/`, así que cambiar de proveedor en el futuro es directo.
 
 ---
 
@@ -58,8 +55,8 @@ soul-and-body_GR/
 │   │   ├── app.js                   # Express + Helmet + parsers + static
 │   │   ├── api/index.js             # monta routers por dominio
 │   │   ├── config/                  # .env + business.js (reglas del negocio)
-│   │   ├── db/                      # conexión + migrate + seed (SQLite)
-│   │   ├── lib/                     # asyncHandler, errors, format, time, http, logger
+│   │   ├── db/                      # Supabase client + migrate + seed
+│   │   ├── lib/                     # errors, http, format, time, asyncHandler, logger
 │   │   ├── middleware/              # auth, csrf, error, rateLimit, validate
 │   │   └── domains/
 │   │       ├── booking/             # cita + disponibilidad + modelo
@@ -80,16 +77,17 @@ soul-and-body_GR/
 │   └── assets/
 │       ├── css/                     # tokens.css, base.css, landing.css, booking.css, admin.css
 │       ├── js/                      # core/, pages/, services/ (ES modules)
-│       └── images/                  # logo.jpg (actuales; añadir SVG y WebP cuando se tengan)
+│       └── images/                  # logo.jpg
 │
 ├── database/
-│   └── schema.sql                   # fuente única de la estructura
+│   └── schema.sql                   # PostgreSQL — se ejecuta UNA vez en Supabase
 │
 ├── docs/
-│   ├── DEPLOYMENT.md
-│   └── TESTING.md
+│   ├── SUPABASE.md                  # setup paso a paso
+│   ├── DEPLOYMENT.md                # Render / Railway / Fly.io
+│   └── TESTING.md                   # auditoría funcional previa
 │
-├── .github/workflows/ci.yml         # lint + test en push/PR
+├── .github/workflows/ci.yml         # lint + test + integration
 ├── .editorconfig, .prettierrc.json, .gitignore
 ├── Iniciar Soul and Body.bat        # wrapper Windows para arrancar local
 └── README.md
@@ -101,6 +99,7 @@ soul-and-body_GR/
 
 ### Requisitos
 - Node.js 20 o superior.
+- Un proyecto de Supabase (gratis, 2 min) — ver [`docs/SUPABASE.md`](docs/SUPABASE.md).
 
 ### Pasos
 
@@ -111,69 +110,68 @@ cd backend
 npm install
 
 # 2) Configurar variables de entorno
-#    Copia la plantilla y edítala con tus valores.
 cp .env.example .env
+# Editar .env y completar SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY + JWT_SECRET + ADMIN_*
 
-# 3) Crear la base de datos y el usuario administrador
+# 3) Aplicar esquema (UNA sola vez) en el SQL editor de Supabase
+#    → database/schema.sql (las instrucciones están en docs/SUPABASE.md)
+
+# 4) Verificar conexión y crear el admin
 npm run setup      # equivale a: npm run migrate && npm run seed
 
-# 4) Arrancar
+# 5) Arrancar
 npm start          # http://localhost:3000
-#    En desarrollo con recarga automática:
-npm run dev
+npm run dev        # con --watch (recarga al cambiar)
 ```
 
 - Página pública: <http://localhost:3000/>
 - Panel de administración: <http://localhost:3000/admin>
 
-El usuario y la contraseña del panel se definen en `.env`
-(`ADMIN_USERNAME` / `ADMIN_PASSWORD`) y se crean al ejecutar `npm run seed`.
-
 ### Comandos útiles
 
-| Comando            | Descripción                                      |
-|--------------------|--------------------------------------------------|
-| `npm start`        | Arranca el servidor.                             |
-| `npm run dev`      | Arranca con `--watch` (recarga al cambiar).      |
-| `npm run migrate`  | Aplica el esquema de la BD (idempotente).        |
-| `npm run seed`     | Crea el admin inicial (idempotente).             |
-| `npm run setup`    | `migrate` + `seed`.                              |
-| `npm test`         | Ejecuta los tests con `node --test`.             |
-| `npm run lint`     | Pasa ESLint.                                     |
-| `npm run format`   | Aplica Prettier.                                 |
+| Comando            | Descripción                                              |
+|--------------------|----------------------------------------------------------|
+| `npm start`        | Arranca el servidor.                                     |
+| `npm run dev`      | Arranca con `--watch` (recarga al cambiar).              |
+| `npm run migrate`  | Verifica que las tablas existen en Supabase.             |
+| `npm run seed`     | Crea el admin inicial (idempotente).                     |
+| `npm run setup`    | `migrate` + `seed`.                                      |
+| `npm test`         | Ejecuta los tests. Si no hay Supabase, salta los de BD.  |
+| `npm run lint`     | Pasa ESLint.                                             |
+| `npm run format`   | Aplica Prettier.                                         |
 
 ---
 
 ## Despliegue
 
-Ver [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) para la guía completa
-(Render/Railway para el backend, GitHub Pages para el frontend, Gmail SMTP,
-dominio y HTTPS).
+Ver [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) para Render/Railway/Fly.io
+y [`docs/SUPABASE.md`](docs/SUPABASE.md) para la configuración de la BD.
 
 ### Resumen rápido
 
-- **Backend** (Render, Railway, etc.): root `backend/`, build `npm install`,
-  start `npm run setup && npm start`. Variables: las de `.env.example`.
-  **Disco persistente** montado en `backend/data` para no perder la BD.
-- **Frontend** (GitHub Pages): la carpeta `frontend/` se sube tal cual a Pages
-  (con `.nojekyll`). Configurar `<meta name="api-base">` en `index.html` y
-  `admin.html` con la URL pública del backend.
+- **BD**: Supabase free tier (500 MB, suficiente para años).
+- **Backend** (Render, Railway, Fly.io): root `backend/`, build `npm install`,
+  start `npm run setup && npm start`. Variables de entorno según la tabla.
+- **Frontend** (GitHub Pages): la carpeta `frontend/` se sube tal cual con
+  `.nojekyll`. Configurar `<meta name="api-base">` con la URL del backend.
 
 ---
 
 ## Variables de entorno
 
-Ver `backend/.env.example` para la lista completa y comentada. Las más importantes:
+Ver `backend/.env.example` para la lista completa. Las más importantes:
 
-| Variable            | Descripción                                                        |
-|---------------------|--------------------------------------------------------------------|
-| `JWT_SECRET`        | Secreto para firmar las sesiones del panel. **Obligatorio en prod**. |
-| `CSRF_SECRET`       | Secreto para la protección CSRF. **Obligatorio en prod**.          |
-| `ADMIN_USERNAME`    | Usuario del panel (se usa solo al hacer `seed`).                   |
-| `ADMIN_PASSWORD`    | Contraseña inicial del panel (cámbiala y luego bórrala del `.env`).|
-| `BUSINESS_TZ`       | Zona horaria del negocio (`America/Bogota`).                       |
-| `BUSINESS_WHATSAPP` | WhatsApp del negocio (formato internacional, ej. `573136147706`).  |
-| `SMTP_*`            | Credenciales de correo (opcional; ver DEPLOYMENT.md).             |
+| Variable                     | Descripción                                            |
+|------------------------------|--------------------------------------------------------|
+| `SUPABASE_URL`               | Project URL de Supabase                                |
+| `SUPABASE_SERVICE_ROLE_KEY`  | service_role key (NO la anon) — solo en el backend    |
+| `JWT_SECRET`                 | Secreto para firmar sesiones. **Obligatorio en prod**. |
+| `CSRF_SECRET`                | (ya no se usa con Supabase, puede quedar vacío)        |
+| `ADMIN_USERNAME`             | Usuario del panel                                      |
+| `ADMIN_PASSWORD`             | Solo para el seed inicial                              |
+| `BUSINESS_TZ`                | `America/Bogota`                                       |
+| `BUSINESS_WHATSAPP`          | `573136147706`                                         |
+| `SMTP_*`                     | Opcional, para correos                                 |
 
 > Los secretos nunca están en el código. El archivo `.env` está en `.gitignore`.
 
@@ -196,8 +194,11 @@ Ahí se cambian, sin tocar el resto del código:
 
 ## Pruebas
 
-- **Tests automatizados**: `cd backend && npm test` (cubre endpoints críticos,
-  servicios y errores).
+- **Tests automatizados**: `cd backend && npm test` — corre los tests puros
+  siempre; los de BD se saltan si no hay credenciales de Supabase.
+- **Tests de integración**: configura `SUPABASE_URL` y
+  `SUPABASE_SERVICE_ROLE_KEY` y vuelve a correr `npm test`.
 - **Lint**: `cd backend && npm run lint`.
-- **CI**: cada push ejecuta `lint + test` en GitHub Actions.
+- **CI**: cada push corre `lint + test` (puros). Si configuras los secrets
+  en GitHub, también corre la suite de integración contra Supabase.
 - **Auditoría manual** previa: ver [`docs/TESTING.md`](docs/TESTING.md).

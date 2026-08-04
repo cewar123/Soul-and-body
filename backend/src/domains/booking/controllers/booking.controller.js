@@ -7,7 +7,7 @@ const booking = require('../services/booking.service');
 
 /** Disponibilidad de una fecha concreta (?date=YYYY-MM-DD). */
 const getAvailability = asyncHandler(async (req, res) => {
-  const data = availability.getAvailability(req.query.date);
+  const data = await availability.getAvailability(req.query.date);
   res.json({ ok: true, data });
 });
 

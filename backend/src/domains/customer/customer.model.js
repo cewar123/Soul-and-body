@@ -1,56 +1,64 @@
 'use strict';
 
-const db = require('../../db/connection');
+const supabase = require('../../db/connection');
 const bcrypt = require('bcryptjs');
 
 /**
- * Acceso a la tabla `customers` (clientes). Todas las consultas usan sentencias preparadas.
+ * Acceso a la tabla `customers` sobre Supabase.
  */
 
 const BCRYPT_ROUNDS = 12;
 
-const stmts = {
-  insert: db.prepare(`
-    INSERT INTO customers (email, password_hash, name, phone)
-    VALUES (@email, @password_hash, @name, @phone)
-  `),
-  byEmail: db.prepare('SELECT * FROM customers WHERE email = ?'),
-  byId: db.prepare('SELECT id, email, name, phone, created_at FROM customers WHERE id = ?'),
-  updateProfile: db.prepare(`
-    UPDATE customers
-    SET name = @name, phone = @phone, updated_at = datetime('now')
-    WHERE id = @id
-  `),
-  updatePassword: db.prepare(`
-    UPDATE customers SET password_hash = @password_hash, updated_at = datetime('now') WHERE id = @id
-  `),
-};
-
-function create({ email, password, name, phone }) {
+async function create({ email, password, name, phone }) {
   const password_hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
-  const info = stmts.insert.run({ email, password_hash, name, phone });
-  return stmts.byId.get(info.lastInsertRowid);
+  const { data, error } = await supabase
+    .from('customers')
+    .insert({ email, password_hash, name, phone })
+    .select('id, email, name, phone, created_at')
+    .single();
+  if (error) throw error;
+  return data;
 }
 
-function findByEmail(email) {
-  return stmts.byEmail.get(email);
+async function findByEmail(email) {
+  const { data, error } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('email', email)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
-function findById(id) {
-  return stmts.byId.get(id);
+async function findById(id) {
+  const { data, error } = await supabase
+    .from('customers')
+    .select('id, email, name, phone, created_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 function verifyPassword(customer, password) {
   return bcrypt.compareSync(password, customer.password_hash);
 }
 
-function updateProfile({ id, name, phone }) {
-  return stmts.updateProfile.run({ id, name, phone });
+async function updateProfile({ id, name, phone }) {
+  const { error } = await supabase
+    .from('customers')
+    .update({ name, phone })
+    .eq('id', id);
+  if (error) throw error;
 }
 
-function updatePassword({ id, password }) {
+async function updatePassword({ id, password }) {
   const password_hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
-  return stmts.updatePassword.run({ id, password_hash });
+  const { error } = await supabase
+    .from('customers')
+    .update({ password_hash })
+    .eq('id', id);
+  if (error) throw error;
 }
 
 module.exports = {

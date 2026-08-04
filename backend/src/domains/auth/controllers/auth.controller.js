@@ -12,11 +12,11 @@ const { issue: issueSession, clear: clearSession } = require('../../../middlewar
  */
 const login = asyncHandler(async (req, res) => {
   const { username, password } = req.body;
-  const admin = adminModel.findByUsername(username);
+  const admin = await adminModel.findByUsername(username);
 
   // Se ejecuta bcrypt incluso si el usuario no existe, para no dar pistas por
   // diferencia de tiempo de respuesta (mitiga enumeración de usuarios).
-  const hash = admin ? admin.password_hash : '$2a$12$0000000000000000000000000000000000000000000000000000';
+  const hash = admin ? admin.password_hash : '$2a$12$0000000000000000000000000000000000000000000000';
   const valid = bcrypt.compareSync(password, hash);
 
   if (!admin || !valid) {
@@ -41,14 +41,14 @@ const me = (req, res) => {
 /** Cambio de contraseña del propio administrador. */
 const changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  const admin = adminModel.findByUsername(req.admin.username);
+  const admin = await adminModel.findByUsername(req.admin.username);
 
   if (!admin || !bcrypt.compareSync(currentPassword, admin.password_hash)) {
     return res.status(401).json({ ok: false, error: 'La contraseña actual no es correcta.', code: 'BAD_CREDENTIALS' });
   }
 
   const passwordHash = bcrypt.hashSync(newPassword, 12);
-  adminModel.updatePassword({ id: admin.id, passwordHash });
+  await adminModel.updatePassword({ id: admin.id, passwordHash });
   return res.json({ ok: true });
 });
 
