@@ -98,15 +98,21 @@ export function availableSlots(query: AvailabilityQuery): TimeStr[] {
 
   const needed = blocksNeeded(durationMin, policy);
   const grid = gridFor(window, policy.quantumMin);
-  if (grid.length < needed) return [];
+  const close = parseMinutes(window.close);
+  if (grid.length === 0) return [];
+
+  // La cita tiene que TERMINAR antes del cierre, no solo empezar antes. Si el
+  // cierre no cae en un múltiplo de la rejilla, un bloque puede existir y aun
+  // así la cita se pasaría de la hora de atención.
+  const endMinutes = needed * policy.quantumMin;
 
   const earliest = earliestStart(date, now, policy, window);
   if (earliest === null) return [];
 
-  return grid.filter((start, index) => {
-    if (index + needed > grid.length) return false;
+  return grid.filter((start) => {
     const startMinutes = parseMinutes(start);
     if (startMinutes < earliest) return false;
+    if (startMinutes + endMinutes > close) return false;
 
     return blockRange(start, needed, policy).every((slot) => !taken.has(slot));
   });

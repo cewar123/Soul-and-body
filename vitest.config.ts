@@ -22,6 +22,8 @@ export default defineConfig({
         bindings: {
           // Migraciones cargadas desde migrations/ y aplicadas en beforeAll.
           TEST_MIGRATIONS: await readD1Migrations(path.join(import.meta.dirname, 'migrations')),
+          // Seeds de seeds/: mismo catálogo y ajustes que producción.
+          TEST_SEED: await readD1Migrations(path.join(import.meta.dirname, 'seeds')),
         },
       },
     })),
