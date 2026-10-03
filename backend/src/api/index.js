@@ -4,11 +4,11 @@ const express = require('express');
 const { apiLimiter } = require('../middleware/rateLimit');
 const { notFound } = require('../middleware/error');
 
-const configRoutes = require('../domains/config/config.routes');
-const bookingRoutes = require('../domains/booking/booking.routes');
-const authRoutes = require('../domains/auth/auth.routes');
-const adminRoutes = require('../domains/admin/admin.routes');
-const customerRoutes = require('../domains/customer/customer.routes');
+const { router: configRoutes } = require('../domain/config');
+const { router: bookingRoutes } = require('../domain/booking');
+const { router: authRoutes } = require('../domain/auth');
+const { router: adminRoutes } = require('../domain/admin');
+const { router: customerRoutes } = require('../domain/customer');
 
 const router = express.Router();
 

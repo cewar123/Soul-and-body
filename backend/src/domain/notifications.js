@@ -1,9 +1,9 @@
 'use strict';
 
 const nodemailer = require('nodemailer');
-const config = require('../../config');
-const logger = require('../../lib/logger');
-const { serviceLabel, formatDate } = require('../../lib/format');
+const config = require('../config');
+const logger = require('../lib/logger');
+const { serviceLabel, formatDate } = require('../lib/format');
 
 /**
  * Servicio de correo con DEGRADACIÓN ELEGANTE: si el SMTP no está configurado

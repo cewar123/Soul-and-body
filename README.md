@@ -57,14 +57,14 @@ soul-and-body_GR/
 │   │   ├── config/                  # .env + business.js (reglas del negocio)
 │   │   ├── db/                      # Supabase client + migrate + seed
 │   │   ├── lib/                     # errors, http, format, time, asyncHandler, logger
-│   │   ├── middleware/              # auth, csrf, error, rateLimit, validate
-│   │   └── domains/
-│   │       ├── booking/             # cita + disponibilidad + modelo
-│   │       ├── config/              # GET /api/config, GET /api/csrf-token
-│   │       ├── auth/                # login admin
-│   │       ├── admin/               # panel de citas
-│   │       ├── customer/            # registro/login de clientas
-│   │       └── notifications/       # email service (Nodemailer)
+│   │   ├── middleware/              # auth, csrf, error, rateLimit, validate, session
+│   │   └── domain/                  # un archivo por dominio (routes+controller+model)
+│   │       ├── booking.js           # citas + disponibilidad + reservas
+│   │       ├── config.js            # GET /api/config, GET /api/csrf-token
+│   │       ├── auth.js              # login/panel del administrador
+│   │       ├── admin.js             # gestión de citas del panel
+│   │       ├── customer.js          # registro/login clientas + "mis citas"
+│   │       └── notifications.js     # email service (Nodemailer)
 │   ├── test/                        # tests con node --test + supertest
 │   ├── eslint.config.js
 │   ├── .prettierrc.json

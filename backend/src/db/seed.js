@@ -10,7 +10,7 @@
 
 const bcrypt = require('bcryptjs');
 const config = require('../config');
-const adminModel = require('../domains/auth/admin.model');
+const { adminModel } = require('../domain/auth');
 const migrate = require('./migrate');
 const logger = require('../lib/logger');
 

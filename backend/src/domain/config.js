@@ -1,7 +1,8 @@
 'use strict';
 
-const config = require('../../../config');
-const { issueToken } = require('../../../middleware/csrf');
+const express = require('express');
+const config = require('../config');
+const { issueToken } = require('../middleware/csrf');
 
 /** Datos públicos que el frontend necesita para pintar el formulario. */
 function getConfig(req, res) {
@@ -29,4 +30,9 @@ function getCsrfToken(req, res) {
   res.json({ ok: true, csrfToken: token });
 }
 
-module.exports = { getConfig, getCsrfToken };
+const router = express.Router();
+
+router.get('/config', getConfig);
+router.get('/csrf-token', getCsrfToken);
+
+module.exports = { router };

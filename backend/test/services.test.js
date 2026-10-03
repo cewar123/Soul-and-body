@@ -5,7 +5,7 @@ const { test } = require('./helpers');
 
 test('availability.allSlotsForDate genera bloques para un día laborable', () => {
   const time = require('../src/lib/time');
-  const availability = require('../src/domains/booking/services/availability.service');
+  const { availability } = require('../src/domain/booking');
   const today = time.getBusinessNowParts().dateStr;
   let monday = today;
   for (let i = 0; i < 14; i += 1) {
@@ -20,7 +20,7 @@ test('availability.allSlotsForDate genera bloques para un día laborable', () =>
 
 test('availability.isWorkingDay devuelve false para domingo', () => {
   const time = require('../src/lib/time');
-  const availability = require('../src/domains/booking/services/availability.service');
+  const { availability } = require('../src/domain/booking');
   let sunday = time.getBusinessNowParts().dateStr;
   for (let i = 0; i < 14; i += 1) {
     sunday = time.addDays(sunday, 1);
@@ -30,7 +30,7 @@ test('availability.isWorkingDay devuelve false para domingo', () => {
 });
 
 test('email.service.esc escapa HTML correctamente', () => {
-  const emailService = require('../src/domains/notifications/email.service');
+  const emailService = require('../src/domain/notifications');
   const input = '<script>alert("xss & \' \'")</script>';
   const out = emailService.esc(input);
   assert.equal(out, '&lt;script&gt;alert(&quot;xss &amp; &#39; &#39;&quot;)&lt;/script&gt;');

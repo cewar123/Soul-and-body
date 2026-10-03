@@ -1,10 +1,14 @@
 'use strict';
 
-const asyncHandler = require('../../../lib/asyncHandler');
-const appointmentModel = require('../../booking/models/appointment.model');
-const { serviceLabel } = require('../../../lib/format');
-const time = require('../../../lib/time');
-const { HttpError } = require('../../../lib/errors');
+const express = require('express');
+const asyncHandler = require('../lib/asyncHandler');
+const { serviceLabel } = require('../lib/format');
+const time = require('../lib/time');
+const { HttpError } = require('../lib/errors');
+const { require: requireAdmin } = require('../middleware/auth');
+const { statusRules, listRules } = require('../middleware/validate');
+const { csrfProtection } = require('../middleware/csrf');
+const { appointmentModel } = require('./booking');
 
 /** Añade la etiqueta legible del servicio a una fila de cita. */
 function decorate(appt) {
@@ -45,4 +49,14 @@ const updateStatus = asyncHandler(async (req, res) => {
   res.json({ ok: true, data: decorate(updated) });
 });
 
-module.exports = { list, stats, getOne, updateStatus };
+const router = express.Router();
+
+// Todas las rutas de este router exigen sesión de administrador válida.
+router.use(requireAdmin);
+
+router.get('/stats', stats);
+router.get('/appointments', listRules, list);
+router.get('/appointments/:id', getOne);
+router.patch('/appointments/:id/status', csrfProtection, statusRules, updateStatus);
+
+module.exports = { router };
