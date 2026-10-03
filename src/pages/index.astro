@@ -1,0 +1,23 @@
+---
+import Base from '../layouts/Base.astro';
+import { loadSiteConfig } from '../lib/config.ts';
+
+// Se ejecuta en workerd durante el build, con el binding D1 disponible: la
+// configuración del negocio queda horneada en el HTML estático.
+const config = await loadSiteConfig();
+const { business } = config;
+---
+
+<Base
+  title="Soul and Body | Estética en Envigado, Antioquia"
+  description="Centro de estética en Envigado. Facial, corporal, drenaje linfático y acompañamiento postquirúrgico. Reserva tu cita por WhatsApp."
+  config={config}
+>
+  <main id="contenido" class="container section">
+    <p class="eyebrow">Fase 0 · andamiaje</p>
+    <h1>{business.name}</h1>
+    <p class="lead">
+      {business.tagline}. {config.services.length} servicios disponibles.
+    </p>
+  </main>
+</Base>

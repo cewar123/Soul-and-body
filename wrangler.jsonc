@@ -1,0 +1,34 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "soul-and-body",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-10-03",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Astro 7 emite los estáticos en dist/client (y un wrangler.json derivado en
+  // esa misma carpeta para dev/build). Para `wrangler deploy` hay que apuntar
+  // aquí explícitamente.
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    // Las rutas de la API se resuelven siempre en el Worker, nunca contra un
+    // archivo estático.
+    "run_worker_first": ["/api/*"],
+    "not_found_handling": "404-page"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "soul-and-body",
+      // PLACEHOLDER — se reemplaza al ejecutar `wrangler d1 create soul-and-body`.
+      // Mientras tanto solo se usa la base local (.wrangler/state).
+      "database_id": "00000000-0000-4000-8000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
+}

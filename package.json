@@ -1,0 +1,57 @@
+{
+  "name": "soul-and-body",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sitio web y sistema de reservas de Soul and Body, centro de estética en Envigado (Antioquia, Colombia).",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "wrangler types && astro dev",
+    "build": "wrangler types && astro build",
+    "preview": "astro preview",
+    "deploy": "npm run build && wrangler deploy",
+    "astro": "astro",
+    "cf": "wrangler",
+    "cf:types": "wrangler types",
+    "db:migrate": "wrangler d1 migrations apply soul-and-body --local",
+    "db:migrate:remote": "wrangler d1 migrations apply soul-and-body --remote",
+    "db:seed": "wrangler d1 execute soul-and-body --local --file=./scripts/seed.sql",
+    "db:seed:remote": "wrangler d1 execute soul-and-body --remote --file=./scripts/seed.sql",
+    "db:studio": "wrangler d1 studio soul-and-body --local",
+    "db:reset": "wrangler d1 execute soul-and-body --local --command=\"DROP TABLE IF EXISTS slot_holds; DROP TABLE IF EXISTS appointments; DROP TABLE IF EXISTS services; DROP TABLE IF EXISTS blocked_dates; DROP TABLE IF EXISTS settings; DROP TABLE IF EXISTS admins;\"",
+    "admin:create": "wrangler d1 execute soul-and-body --local --file=./scripts/create-admin.sql",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "astro check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run typecheck && npm run test"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.9.1",
+    "astro": "^7.3.5",
+    "hono": "^4.13.12",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@astrojs/cloudflare": "^14.3.3",
+    "@cloudflare/vitest-plugin": "^1.3.6",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.4",
+    "astro-eslint-parser": "^3.2.0",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.9",
+    "prettier-plugin-astro": "^1.1.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.147.0"
+  }
+}

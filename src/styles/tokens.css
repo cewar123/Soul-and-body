@@ -1,0 +1,125 @@
+/*
+ * Tokens de diseño — Soul and Body
+ * ---------------------------------------------------------------------------
+ * Paleta extraída de la identidad gráfica: rosa blush, terracota, burdeos y
+ * oro. El sitio tiene que funcionar bien SIN fotos, así que la escala tipográfica
+ * y el ritmo de espaciado hacen el trabajo visual.
+ */
+
+:root {
+  /* --- Color ------------------------------------------------------------ */
+  --blush-50: #fdf8f6;
+  --blush-100: #f9e8e4;
+  --blush-200: #f3d5cf;
+  --blush-300: #e9b8ae;
+
+  --terracotta: #c2705a;
+  --terracotta-dark: #a45a46;
+  --terracotta-light: #d18d78;
+
+  --burgundy: #6b3238;
+  --burgundy-deep: #4f2429;
+
+  --gold: #c6a15b;
+  --gold-light: #dfc48b;
+  --gold-soft: #e8d6ae;
+
+  --cream: #fbf3ef;
+  --ink: #2e2124;
+  --ink-soft: #6b5a5e;
+  --ink-muted: #93858a;
+
+  --success: #4a7c59;
+  --warning: #b8863b;
+  --danger: #a63d40;
+
+  /* Superficies */
+  --bg: var(--blush-50);
+  --bg-alt: var(--cream);
+  --surface: #ffffff;
+  --surface-sunken: var(--blush-100);
+  --border: #e7d5d0;
+  --border-strong: var(--blush-300);
+
+  /* Texto */
+  --text: var(--ink);
+  --text-soft: var(--ink-soft);
+  --text-muted: var(--ink-muted);
+  --text-inverse: #ffffff;
+  --text-accent: var(--burgundy);
+
+  /* --- Tipografía ------------------------------------------------------- */
+  --font-display: 'Cormorant Garamond', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --font-body:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Escala 1.25 (tercera mayor) sobre 1rem */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.625rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.5rem;
+  --text-5xl: 3.25rem;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.6;
+  --leading-relaxed: 1.75;
+
+  --tracking-wide: 0.08em;
+  --tracking-wider: 0.16em;
+
+  /* --- Espaciado (base 4px) -------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+  --space-10: 8rem;
+
+  /* Ancho de contenido legible */
+  --measure: 68ch;
+  --container: 72rem;
+  --container-narrow: 46rem;
+
+  /* --- Forma ------------------------------------------------------------ */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgb(107 50 56 / 0.06);
+  --shadow: 0 2px 8px rgb(107 50 56 / 0.08);
+  --shadow-lg: 0 12px 32px rgb(107 50 56 / 0.12);
+
+  /* --- Movimiento ------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration: 220ms;
+
+  --focus-ring: 0 0 0 3px var(--blush-300);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,119 @@
+---
+import '../styles/tokens.css';
+import '../styles/base.css';
+import type { SiteConfig } from '../lib/config.ts';
+
+interface Props {
+  title: string;
+  description: string;
+  config: SiteConfig;
+  /** 'index' | 'website' | 'service' */
+  ogType?: 'website' | 'article';
+  noindex?: boolean;
+}
+
+const { title, description, config, ogType = 'website', noindex = false } = Astro.props;
+
+const { business } = config;
+const site = Astro.site ?? Astro.url.origin;
+const canonical = new URL(Astro.url.pathname, site).href;
+const ogImage = new URL('/og-default.svg', site).href;
+
+/** Datos estructurados. Solo los tipos que Google sigue mostrando. */
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': ['HealthAndBeautyBusiness', 'LocalBusiness'],
+  name: business.name,
+  description,
+  url: site,
+  telephone: business.phoneE164,
+  image: [ogImage],
+  logo: ogImage,
+  priceRange: '$$',
+  currenciesAccepted: 'COP',
+  paymentAccepted: business.paymentAccepted,
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: business.address,
+    addressLocality: business.city,
+    addressRegion: business.department,
+    addressCountry: business.country,
+  },
+  geo: {
+    '@type': 'GeoCoordinates',
+    latitude: business.geoLat,
+    longitude: business.geoLng,
+  },
+  areaServed: [
+    { '@type': 'City', name: 'Envigado' },
+    { '@type': 'Place', name: 'Sabaneta' },
+    { '@type': 'Place', name: 'La Estrella' },
+    { '@type': 'Place', name: 'Itagüí' },
+  ],
+  sameAs: [business.instagram],
+  openingHoursSpecification: Object.entries(config.schedule)
+    .filter(([, window]) => window !== null)
+    .map(([day, window]) => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: [
+        'Sunday',
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+      ][Number(day)],
+      opens: window?.open,
+      closes: window?.close,
+    })),
+  founder: {
+    '@type': 'Person',
+    name: business.owner,
+    worksFor: { '@type': 'Organization', name: business.name },
+  },
+};
+---
+
+<!doctype html>
+<html lang="es-CO">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={business.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:locale" content="es_CO" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <meta name="geo.region" content="CO-ANT" />
+    <meta name="geo.placename" content={business.city} />
+    <meta name="geo.position" content={`${business.geoLat};${business.geoLng}`} />
+    <meta name="ICBM" content={`${business.geoLat}, ${business.geoLng}`} />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline />
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  /* Aquí iría el header y footer compartidos cuando se construyan. */
+</style>

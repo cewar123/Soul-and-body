@@ -1,0 +1,30 @@
+# Dependencias
+node_modules/
+
+# Build
+dist/
+.astro/
+
+# Estado local de wrangler / D1 (¡nunca subir datos de development!)
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# Secretos
+.env
+.env.*
+!.env.example
+
+# Generado por `wrangler types` — se regenera en dev/build
+worker-configuration.d.ts
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/

@@ -1,0 +1,27 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    // Los tipos de bindings y del runtime los genera `wrangler types` en
+    // worker-configuration.d.ts (autocontenido: no hace falta
+    // @cloudflare/workers-types). Los tipos del entorno de tests (cloudflare:test,
+    // D1Migration) vienen del plugin de Vitest.
+    "types": ["@cloudflare/vitest-plugin/types"],
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true
+  },
+  "include": [
+    ".astro/types.d.ts",
+    "worker-configuration.d.ts",
+    "src/**/*",
+    "scripts/**/*",
+    "tests/**/*",
+    "*.ts",
+    "*.mjs"
+  ],
+  "exclude": ["dist", "node_modules", ".astro", ".wrangler"]
+}
