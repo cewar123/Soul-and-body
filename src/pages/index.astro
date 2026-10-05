@@ -1,4 +1,8 @@
 ---
+// Página prerenderizada: sale como HTML estático y se sirve desde el CDN sin
+// ejecutar el Worker. Es lo que necesitan los buscadores.
+export const prerender = true;
+
 import Base from '../layouts/Base.astro';
 import { loadSiteConfig } from '../lib/config.ts';
 

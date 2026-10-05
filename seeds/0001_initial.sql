@@ -39,6 +39,9 @@ ON CONFLICT (slug) DO UPDATE SET
   description  = excluded.description,
   duration_min = excluded.duration_min,
   price_cop    = excluded.price_cop,
+  -- Se restaura también `active`: los tests de borrado lo desactivan, y el
+  -- seed tiene que devolver siempre el catálogo base.
+  active       = excluded.active,
   sort_order   = excluded.sort_order;
 
 -- --- Ajustes del negocio ---------------------------------------------------

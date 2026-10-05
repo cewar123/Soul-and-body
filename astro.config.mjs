@@ -1,16 +1,31 @@
 import { defineConfig } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';
+import { loadEnvFile } from 'node:process';
 
-// URL pública. Se sobreescribe con la variable de entorno PUBLIC_URL (o .env)
-// para no tener que editar el código cuando haya dominio propio.
+// Astro lee `.env` para `import.meta.env`, pero astro.config.mjs se evalúa en
+// Node antes de eso, así que las variables no están en `process.env`. Se carga
+// el archivo a mano (función nativa de Node 22). Si no existe, se sigue con lo
+// que haya en el entorno — que es como funciona en CI.
+try {
+  loadEnvFile();
+} catch {
+  // Sin .env: normal en CI, donde las variables llegan por el entorno.
+}
+
+// URL pública. Al cambiar esto cambian a la vez los canonical, el sitemap, los
+// datos estructurados y las URLs de las previews.
 const site = process.env.PUBLIC_URL ?? 'https://soul-and-body.workers.dev';
 
-// `output: 'static'` prerenderiza todo el HTML público en el build. Lo único
-// dinámico es /api/*, que lo resuelve el router de Hono montado en src/worker.ts
-// ANTES de que Astro atienda el request. Un solo Worker, un solo origen, sin CORS.
+// `output: 'server'` es obligatorio para que Astro emita el bundle del Worker.
+// Con `output: 'static'` y todas las páginas prerenderizadas no genera ningún
+// bundle, y el `src/worker.ts` (que monta la API de Hono) nunca se despliega.
+//
+// El HTML público sigue siendo estático de verdad: cada página declara
+// `export const prerender = true` y sale como asset con cache inmutable. Lo
+// único on-demand es /api/*.
 export default defineConfig({
   site,
-  output: 'static',
+  output: 'server',
   adapter: cloudflare({
     // `cloudflare` usa Image Resizing (gratis en el mismo Worker) sin pedir un
     // binding de pago. Cambiar a 'compile' si alguna vez se rompe en workerd.

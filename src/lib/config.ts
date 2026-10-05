@@ -17,6 +17,7 @@
  */
 
 import { env } from 'cloudflare:workers';
+import { normalizePhoneCol } from './normalize.ts';
 import type { DateStr, DayWindow } from './time.ts';
 
 export interface BusinessInfo {
@@ -148,8 +149,17 @@ function readSchedule(raw: string | undefined): Record<string, DayWindow | null>
   }
 }
 
-function readNumber(value: string | undefined, fallback: number): number {
+function readInt(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value ?? '', 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+/**
+ * Coordenadas: decimal, no entero. parseInt('6.1719') devuelve 6 y deja al
+ * negocio fuera de su punto exacto en el mapa y en el meta geo.
+ */
+function readCoordinate(value: string | undefined, fallback: number): number {
+  const parsed = Number.parseFloat(value ?? '');
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
@@ -202,20 +212,20 @@ export async function loadSiteConfig(db?: D1Database): Promise<SiteConfig> {
       city: settings['business.city'] ?? SETTING_DEFAULTS['business.city'],
       department: settings['business.department'] ?? SETTING_DEFAULTS['business.department'],
       country: settings['business.country'] ?? SETTING_DEFAULTS['business.country'],
-      geoLat: readNumber(settings['business.geo_lat'], 6.1719),
-      geoLng: readNumber(settings['business.geo_lng'], -75.5917),
+      geoLat: readCoordinate(settings['business.geo_lat'], 6.1719),
+      geoLng: readCoordinate(settings['business.geo_lng'], -75.5917),
       paymentAccepted:
         settings['business.payment_accepted'] ?? SETTING_DEFAULTS['business.payment_accepted'],
       contactEmail: settings['admin.contact_email'] ?? '',
     },
     schedule: readSchedule(settings['schedule']),
     policy: {
-      minLeadMinutes: readNumber(settings['booking.min_lead_minutes'], 120),
-      horizonDays: readNumber(settings['booking.horizon_days'], 60),
-      slotQuantumMin: readNumber(settings['booking.slot_quantum_min'], 30),
-      cancellationHours: readNumber(settings['booking.cancellation_hours'], 24),
-      minimumAge: readNumber(settings['booking.minimum_age'], 18),
-      bufferMinutes: readNumber(settings['booking.buffer_minutes'], 0),
+      minLeadMinutes: readInt(settings['booking.min_lead_minutes'], 120),
+      horizonDays: readInt(settings['booking.horizon_days'], 60),
+      slotQuantumMin: readInt(settings['booking.slot_quantum_min'], 30),
+      cancellationHours: readInt(settings['booking.cancellation_hours'], 24),
+      minimumAge: readInt(settings['booking.minimum_age'], 18),
+      bufferMinutes: readInt(settings['booking.buffer_minutes'], 0),
     },
     notify: {
       emailEnabled: settings['notify.email_enabled'] === '1',
@@ -243,10 +253,13 @@ export function whatsappLink(
   return `${base}/${whatsappE164}?text=${encodeURIComponent(message)}`;
 }
 
-/** Teléfono en formato E.164 para los datos estructurados. */
+/**
+ * Teléfono en formato E.164 para los datos estructurados. Delega en
+ * `normalizePhoneCol`, que ya sabe distinguir un móvil, un fijo y un número con
+ * o sin el prefijo 57.
+ */
 export function toE164(display: string, fallback = '+573136147706'): string {
-  const digits = display.replace(/\D/g, '');
-  return digits.length >= 10 ? `+${digits}` : fallback;
+  return normalizePhoneCol(display) ?? fallback;
 }
 
 /** 'YYYY-MM-DD' → 'YYYY-MM-DDTHH:MM' con offset de Colombia. */

@@ -21,9 +21,8 @@
     {
       "binding": "DB",
       "database_name": "soul-and-body",
-      // PLACEHOLDER — se reemplaza al ejecutar `wrangler d1 create soul-and-body`.
-      // Mientras tanto solo se usa la base local (.wrangler/state).
-      "database_id": "00000000-0000-4000-8000-000000000000",
+      // Creada con `npx wrangler d1 create soul-and-body` (región ENAM).
+      "database_id": "daeca295-04f2-4026-bf96-5bcdb4aae74b",
       "migrations_dir": "migrations"
     }
   ],
