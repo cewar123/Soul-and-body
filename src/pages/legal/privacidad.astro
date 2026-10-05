@@ -1,0 +1,257 @@
+---
+export const prerender = true;
+
+import Base from '../../layouts/Base.astro';
+import { loadSiteConfig } from '../../lib/config.ts';
+
+const config = await loadSiteConfig();
+const { business } = config;
+---
+
+<Base
+  title="Aviso de privacidad y tratamiento de datos | Soul and Body"
+  description={`Cómo tratamos tus datos personales y de salud en ${business.name}, conforme a la Ley 1581 de 2012 de Colombia.`}
+  config={config}
+>
+  <main id="contenido" class="container-narrow legal">
+    <p class="eyebrow">Legal</p>
+    <h1>Aviso de privacidad y tratamiento de datos personales</h1>
+    <p class="legal__meta">Última actualización: octubre de 2026</p>
+
+    <p class="legal__lead">
+      Este aviso explica qué datos recogemos, para qué los usamos, dónde se guardan y cómo puedes
+      ejercer tus derechos. Es un resumen legible, no un sustituto de la ley.
+    </p>
+
+    <h2>1. Responsable del tratamiento</h2>
+    <p>
+      El responsable es <strong>{business.owner}</strong>, en nombre de
+      <strong>{business.name}</strong>, con domicilio en {business.address}, {business.city},
+      {business.department}, Colombia.
+    </p>
+    <p>
+      Para cualquier asunto relacionado con datos personales puedes escribir a
+      <a href={`mailto:${business.contactEmail}`}>{business.contactEmail}</a>.
+    </p>
+
+    <h2>2. Qué datos recogemos</h2>
+    <ul>
+      <li>
+        <strong>Nombre y teléfono.</strong> Necesarios para poder confirmar contigo la cita.
+      </li>
+      <li>
+        <strong>Correo electrónico.</strong> Opcional. Lo pedimos solo si prefieres recibir la
+        confirmación por correo en lugar de WhatsApp.
+      </li>
+      <li>
+        <strong>Información que tú nos das sobre tu tratamiento.</strong> Nota de la reserva,
+        alergias, contraindicaciones o antecedentes relevantes que decides contarnos. Esto se
+        considera <strong>dato de salud</strong> y por eso tiene su propio consentimiento.
+      </li>
+      <li>
+        <strong>Edad.</strong> Solo para verificar que eres mayor de
+        {config.policy.minimumAge} años, como exige la
+        <strong>Ley 1799 de 2016</strong> para procedimientos estéticos.
+      </li>
+      <li>
+        <strong>Datos técnicos.</strong> Dirección IP y navegador, de forma agregada, solo para
+        prevenir abuso y spam en el formulario de reservas.
+      </li>
+    </ul>
+    <p>
+      <strong>No pedimos</strong> diagnósticos, recetas ni examenes médicos por este formulario.
+      Si necesitas esa información para atenderte, se conversa en la consulta.
+    </p>
+
+    <h2>3. Para qué los usamos y con qué base legal</h2>
+    <ul>
+      <li>
+        <strong>Ejecutar la reserva:</strong> crear la cita, evitar que dos personas ocupen el mismo
+        horario y avisarte de cualquier cambio. Base: ejecución del contrato.
+      </li>
+      <li>
+        <strong>Confirmar y recordar la cita:</strong> por WhatsApp o correo, solo si lo autorizas.
+        Base: tu consentimiento, revocable.
+      </li>
+      <li>
+        <strong>Atenderte con criterios de seguridad:</strong> considerar contraindicaciones y
+        cuidar tu piel. Base: <strong>autorización explícita</strong> para datos de salud.
+      </li>
+      <li>
+        <strong>Conservar el registro de la atención:</strong> por obligación legal sanitaria
+        colombiana. Base: cumplimiento de obligación legal.
+      </li>
+      <li>
+        <strong>Prevenir el uso automatizado del formulario:</strong> base: interés legítimo en
+        proteger la disponibilidad del sistema.
+      </li>
+    </ul>
+
+    <h2>4. Consentimiento explícito para los datos de salud</h2>
+    <div class="legal__callout">
+      <p>
+        <strong>Esto es lo más importante de este aviso.</strong> Los datos sobre tu salud son datos
+        <strong>sensibles</strong>. Según el <strong>artículo 5 de la Ley 1581 de 2012</strong>, su
+        tratamiento está <strong>prohibido</strong> salvo que des una autorización explícita.
+      </p>
+      <p>
+        Por eso el formulario de reserva tiene <strong>una casilla propia y separada</strong>, que
+        viene desmarcada. Marcarla es tu decisión, es distinta de aceptar los términos de este
+        sitio y puedes retirarla cuando quieras.
+      </p>
+    </div>
+    <p>
+      Puedes retirar tu consentimiento escribiendo a
+      <a href={`mailto:${business.contactEmail}`}>{business.contactEmail}</a>. Una vez retirado,
+      dejamos de usar esa información, salvo que exista una obligación legal de conservarla.
+    </p>
+
+    <h2>5. Dónde se guardan y quién los accede</h2>
+    <ul>
+      <li>
+        Este sitio funciona sobre <strong>Cloudflare</strong>, proveedor internacional con
+        infraestructura en Estados Unidos y Europa. Los datos de las reservas se almacenan en una
+        base de datos alojada por Cloudflare. Esto es una <strong>transferencia internacional</strong>,
+        que la ley colombiana admite bajo ciertas garantías, y te la declaramos de forma expresa.
+      </li>
+      <li>
+        <strong>Google</strong>, si decides contactarnos por WhatsApp o correo: la conversación
+        se procesa en sus servidores.
+      </li>
+      <li>
+        <strong>No vendemos ni cedemos tus datos a terceros con fines comerciales.</strong> No los
+        usamos para publicidad.
+      </li>
+    </ul>
+    <p>
+      Solo acceden a los datos las personas que forman parte del negocio y lo necesitan para atender
+      tu cita. Cada persona autorizada recibe además las medidas de seguridad exigidas por la ley.
+    </p>
+
+    <h2>6. Cuánto tiempo conservamos los datos</h2>
+    <ul>
+      <li>
+        <strong>Datos de una reserva:</strong> mientras dure la relación y después, por el tiempo
+        necesario para atender reclamaciones. Como referencia, hasta
+        <strong>5 años</strong> desde la última interacción.
+      </li>
+      <li>
+        <strong>Información clínica de la atención:</strong> los plazos que fija la normativa
+        sanitaria colombiana sobre historia clínica.
+      </li>
+      <li>
+        <strong>Datos de contacto para recordatorios de cita:</strong> hasta que los borres o retires
+        tu consentimiento.
+      </li>
+    </ul>
+    <p>
+      Al terminar esos plazos, los datos se eliminan o anonimizan de forma irreversible.
+    </p>
+
+    <h2>7. Tus derechos</h2>
+    <p>La ley garantiza que puedes, en cualquier momento y de forma gratuita:</p>
+    <ul>
+      <li>Saber qué datos tuyos tenemos y para qué los usamos.</li>
+      <li>Solicitar una copia de ellos.</li>
+      <li>Corregir datos inexactos o incompletos.</li>
+      <li>Pedir su eliminación cuando la ley lo permita.</li>
+      <li>Revocar el consentimiento que hayas dado, sin que ello afecte la licitud del uso previo.</li>
+      <li>Limitar el uso de tus datos para fines concretos.</li>
+    </ul>
+    <p>
+      Para ejercerlos escribe a <a href={`mailto:${business.contactEmail}`}>{business.contactEmail}</a>
+      con asunto «Solicitud de titular». Respondemos dentro de los plazos que establece la ley.
+    </p>
+    <p>
+      Si consideras que hemos vulnerado la normativa, puedes presentar una queja ante la
+      <strong>Superintendencia de Industria y Comercio</strong> (SIC).
+    </p>
+
+    <h2>8. Seguridad y buenas prácticas</h2>
+    <ul>
+      <li>Cifrado en tránsito mediante HTTPS.</li>
+      <li>Contraseñas del panel almacenadas con PBKDF2-SHA256 y sal única.</li>
+      <li>Sesiones de administración firmadas y con caducidad.</li>
+      <li>Validación de todos los datos que entran por los formularios.</li>
+      <li>
+        <strong>Verificación con Cloudflare Turnstile</strong> para impedir reservas automatizadas.
+      </li>
+      <li>Copias de seguridad de la base de datos.</li>
+    </ul>
+
+    <h2>9. Cambios a este aviso</h2>
+    <p>
+      Si actualizamos este aviso, publicaremos la nueva versión con su fecha correspondiente. Si el
+      cambio afecta de forma sustancial tus derechos, te avisaremos por correo o WhatsApp.
+    </p>
+
+    <div class="legal__footer">
+      <p>
+        ¿Alguna duda sobre este aviso? Escríbenos a
+        <a href={`mailto:${business.contactEmail}`}>{business.contactEmail}</a>. Para consultas
+        generales, <a href={`tel:${business.phoneE164}`}>{business.phoneDisplay}</a>.
+      </p>
+    </div>
+  </main>
+</Base>
+
+<style>
+  .legal {
+    padding-block: var(--space-8) var(--space-9);
+  }
+
+  .legal__meta {
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .legal__lead {
+    margin-top: var(--space-5);
+    color: var(--text-soft);
+  }
+
+  .legal h2 {
+    margin-top: var(--space-7);
+    margin-bottom: var(--space-3);
+    font-size: var(--text-2xl);
+  }
+
+  .legal p,
+  .legal ul {
+    margin-bottom: var(--space-4);
+  }
+
+  .legal ul {
+    padding-left: 1.15rem;
+  }
+
+  .legal li {
+    margin-bottom: var(--space-2);
+    color: var(--text-soft);
+  }
+
+  .legal strong {
+    color: var(--text);
+  }
+
+  .legal__callout {
+    margin-block: var(--space-6);
+    padding: var(--space-5);
+    background: var(--blush-100);
+    border-left: 3px solid var(--terracotta);
+    border-radius: var(--radius);
+  }
+
+  .legal__callout p:last-child {
+    margin-bottom: 0;
+  }
+
+  .legal__footer {
+    margin-top: var(--space-8);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+</style>

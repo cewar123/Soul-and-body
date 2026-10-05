@@ -1,0 +1,91 @@
+---
+import type { ServiceSummary } from '../lib/config.ts';
+import { formatPrice } from '../lib/config.ts';
+
+interface Props {
+  service: ServiceSummary;
+}
+
+const { service } = Astro.props;
+---
+
+<article class="service">
+  <div class="service__media media-frame" aria-hidden="true"></div>
+
+  <div class="service__body">
+    <h3 class="service__name">{service.name}</h3>
+    <p class="service__desc">{service.description}</p>
+
+    <p class="service__meta">
+      <span class="service__duration">{service.durationMin} min</span>
+      <span class="service__price">{formatPrice(service.priceCop)}</span>
+    </p>
+  </div>
+</article>
+
+<style>
+  .service {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    transition: box-shadow var(--duration) var(--ease-out), transform var(--duration) var(--ease-out);
+  }
+
+  .service:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+  }
+
+  /* Marco reservado: cuando lleguen las fotos, solo se cambia el contenido de
+     este bloque y el layout no se mueve. */
+  .service__media {
+    aspect-ratio: 3 / 2;
+    border-radius: 0;
+  }
+
+  .service__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: var(--space-5);
+  }
+
+  .service__name {
+    margin-bottom: var(--space-2);
+    font-size: var(--text-xl);
+  }
+
+  .service__desc {
+    flex: 1;
+    margin-bottom: var(--space-4);
+    color: var(--text-soft);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  .service__meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+  }
+
+  .service__duration {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .service__price {
+    color: var(--terracotta-dark);
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

@@ -1,0 +1,239 @@
+---
+export const prerender = true;
+
+import Base from '../../layouts/Base.astro';
+import { loadSiteConfig } from '../../lib/config.ts';
+
+const config = await loadSiteConfig();
+const { business, policy } = config;
+---
+
+<Base
+  title="Términos y condiciones | Soul and Body"
+  description={`Condiciones de reserva, cancelación y pago de ${business.name}. Léelas antes de agendar tu cita.`}
+  config={config}
+>
+  <main id="contenido" class="container-narrow legal">
+    <p class="eyebrow">Legal</p>
+    <h1>Términos y condiciones</h1>
+    <p class="legal__meta">Última actualización: octubre de 2026</p>
+
+    <p class="legal__lead">
+      Estas condiciones rigen el uso de este sitio y la reserva de citas en {business.name}.
+    </p>
+
+    <h2>1. Sobre este sitio</h2>
+    <p>
+      Este sitio permite consultar servicios, precios y horarios, y reservar una cita. El contenido
+      informativo <strong>no reemplaza una valoración presencial</strong>. Lo que se puede lograr
+      con un tratamiento depende de cada piel y de cada caso, y eso solo se puede criterio después
+      de verte o de hablar contigo.
+    </p>
+
+    <h2>2. Reserva de citas</h2>
+    <ul>
+      <li>Reservar es <strong>gratuito</strong> y no implica pago adelantado.</li>
+      <li>
+        La cita queda <strong>pendiente</strong> hasta que la confirmamos por WhatsApp o correo. Ese
+        momento el horario queda bloqueado para ti.
+      </li>
+      <li>Solo se pueden reservar horarios dentro del horario de atención publicado.</li>
+      <li>Cada cita corresponde a un servicio. Para varios servicios, varias citas.</li>
+      <li>
+        El sistema muestra únicamente horarios libres. Si al confirmar ya no estuviera disponible, te
+        lo decimos y buscamos la alternativa más cercana.
+      </li>
+    </ul>
+
+    <h2>3. Anticipación y duración</h2>
+    <ul>
+      <li>
+        Se aceptan reservas desde <strong>{policy.minLeadMinutes} minutos</strong> antes de la hora
+        de la cita.
+      </li>
+      <li>El máximo de anticipación es de <strong>{policy.horizonDays} días</strong>.</li>
+      <li>
+        La duración de cada cita depende del servicio y es la que figura en su ficha. Si necesitas
+        más tiempo, se coordina antes.
+      </li>
+    </ul>
+
+    <h2>4. Cambios y cancelaciones</h2>
+    <ul>
+      <li>
+        Puedes cambiar o cancelar tu cita escribiendo por WhatsApp o correo con al menos
+        <strong>{policy.cancellationHours} horas de anticipación</strong>.
+      </li>
+      <li>
+        Las cancelaciones con menos de {policy.cancellationHours} horas de aviso, o las que no se
+        avisan, pueden implicar el cobro de la cita: el horario queda bloqueado y quizá otra persona
+        ya lo ha tomado.
+      </li>
+      <li>
+        Si necesitas cancelar con muy poca antelación, escríbenos igual y lo evaluamos caso por
+        caso.
+      </li>
+      <li>Cambiar la fecha depende de la disponibilidad en ese momento.</li>
+    </ul>
+
+    <h2>5. Llegar tarde y no presentarse</h2>
+    <ul>
+      <li>Te pedimos llegar <strong>5 minutos antes</strong> para preparar tu valoración.</li>
+      <li>
+        Si llegas más de <strong>15 minutos tarde</strong> puede que haya que reprogramar, porque el
+        horario siguiente ya está reservado.
+      </li>
+      <li>La ausencia sin aviso queda registrada como cita no mostrada y cuenta como perdida.</li>
+    </ul>
+
+    <h2>6. Precios y formas de pago</h2>
+    <ul>
+      <li>
+        Los precios publicados son los vigentes al reservar. Las condiciones objetivos anunciadas
+        se consideran <strong>vinculantes</strong> mientras no cambien.
+      </li>
+      <li>
+        Aceptamos <strong>{business.paymentAccepted}</strong>. El pago se hace en el momento del
+        servicio, no en línea.
+      </li>
+      <li>Si el precio cambia después de que reservaste, se respeta el que viste al reservar.</li>
+      <li>
+        Los tratamientos que requieren productos o insumos de terceros pueden tener un costo
+        adicional, que se informa y se autoriza antes de hacerlo.
+      </li>
+    </ul>
+
+    <h2>7. Resultados</h2>
+    <p>
+      Nos cuidamos mucho en el resultado, pero la respuesta de la piel y del cuerpo a los
+      tratamientos varía de persona a persona. Ninguna descripción de este sitio es una garantía de
+      un resultado concreto.
+    </p>
+
+    <h2>8. Edad mínima</h2>
+    <div class="legal__callout">
+      <p>
+        <strong>Solo atendemos a mayores de {policy.minimumAge} años.</strong> La
+        <strong>Ley 1799 de 2016</strong> prohíbe practicar procedimientos médicos o quirúrgicos
+        estéticos en menores de edad, y prohíbe igualmente promocionárselos. Al reservar se
+        solicita la edad y, si no cumples el requisito, se cancela la cita.
+      </p>
+    </div>
+
+    <h2>9. Valoración y contraindicaciones</h2>
+    <p>
+      Antes de cualquier tratamiento hacemos una valoración. Debes informar si estás embarazada o en
+      lactancia, si tienes antecedentes relevantes, si usas medicamentos, si tienes alergias, o si
+      te hiciste un procedimiento químico, láser o peelings recientemente. También debes comentar si
+      tienes algún implante o relleno reciente.
+    </p>
+    <p>
+      <strong>Ocultar información de salud puede poner en riesgo tu bienestar</strong>. Por eso la
+      valoración no es un trámite.
+    </p>
+
+    <h2>10. Llegar preparada</h2>
+    <p>
+      Para tratamientos faciales y corporales conviene venir con la piel limpia, sin bronceado
+      reciente y sin maquillaje.
+    </p>
+
+    <h2>11. Objetos personales</h2>
+    <p>
+      El consultorio no responde por objetos personales que dejes con nosotros. Procura no llevar
+      joyería ni artículos de valor mientras estés en el procedimiento.
+    </p>
+
+    <h2>12. Uso del sitio</h2>
+    <ul>
+      <li>
+        El contenido es informativo. Está prohibido usarlo para diagnosticarte o autotratarte.
+      </li>
+      <li>
+        Está prohibido intentar acceder al panel de administración, alterar el sistema o enviar
+        reservas automatizadas.
+      </li>
+    </ul>
+
+    <h2>13. Propiedad intelectual</h2>
+    <p>
+      El nombre, el logotipo y el diseño pertenecen a {business.owner}. No pueden reproducirse ni
+      usarse con fines comerciales sin autorización previa.
+    </p>
+
+    <h2>14. Legislación aplicable</h2>
+    <p>
+      Estos términos se rigen por las leyes de la <strong>República de Colombia</strong>. Cualquier
+      controversia se somete a los jueces de {business.city}, {business.department}.
+    </p>
+
+    <div class="legal__footer">
+      <p>
+        ¿Dudas antes de reservar? Escríbenos al
+        <a href={`tel:${business.phoneE164}`}>{business.phoneDisplay}</a> o a
+        <a href={`mailto:${business.contactEmail}`}>{business.contactEmail}</a>.
+      </p>
+    </div>
+  </main>
+</Base>
+
+<style is:global>
+  .legal {
+    padding-block: var(--space-8) var(--space-9);
+  }
+
+  .legal__meta {
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .legal__lead {
+    margin-top: var(--space-5);
+    color: var(--text-soft);
+  }
+
+  .legal h2 {
+    margin-top: var(--space-7);
+    margin-bottom: var(--space-3);
+    font-size: var(--text-2xl);
+  }
+
+  .legal p,
+  .legal ul {
+    margin-bottom: var(--space-4);
+  }
+
+  .legal ul {
+    padding-left: 1.15rem;
+  }
+
+  .legal li {
+    margin-bottom: var(--space-2);
+    color: var(--text-soft);
+  }
+
+  .legal strong {
+    color: var(--text);
+  }
+
+  .legal__callout {
+    margin-block: var(--space-6);
+    padding: var(--space-5);
+    background: var(--blush-100);
+    border-left: 3px solid var(--terracotta);
+    border-radius: var(--radius);
+  }
+
+  .legal__callout p:last-child {
+    margin-bottom: 0;
+  }
+
+  .legal__footer {
+    margin-top: var(--space-8);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+</style>

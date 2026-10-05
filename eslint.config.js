@@ -52,6 +52,21 @@ export default ts.config(
     },
   },
 
+  // ── Configuración de build (Node, no Workerd) ──────────────────────────────
+  // astro.config.mjs, vitest.config.ts y eslint.config.js se ejecutan en Node:
+  // ahí `process.env` no viene de los tipos del runtime de Workers, así que las
+  // reglas basadas en tipos darían falsos positivos.
+  {
+    files: ['*.config.mjs', '*.config.ts', 'eslint.config.js'],
+    rules: {
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+    },
+  },
+
   // ── .astro ─────────────────────────────────────────────────────────────────
   // astro-eslint-parser v3 es solo un parser (ya no expone `configs`), así que
   // se registra directamente en languageOptions. El type-check del template lo

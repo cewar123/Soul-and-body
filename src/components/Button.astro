@@ -1,0 +1,89 @@
+---
+/**
+ * Botones y enlaces de acción.
+ * `variant`: primary (terracota) · ghost (contorno) · whatsapp · link
+ */
+interface Props {
+  href: string;
+  variant?: 'primary' | 'ghost' | 'whatsapp';
+  size?: 'md' | 'lg';
+  external?: boolean;
+  class?: string;
+}
+
+const { href, variant = 'primary', size = 'md', external = false, class: extra = '' } = Astro.props;
+
+const classes = ['btn', `btn--${variant}`, size === 'lg' && 'btn--lg', extra]
+  .filter(Boolean)
+  .join(' ');
+
+const isExternal = external || href.startsWith('http') || href.startsWith('tel:');
+const attrs = isExternal ? { target: '_blank', rel: 'noopener' } : {};
+---
+
+<a class={classes} href={href} {...attrs}>
+  <slot />
+</a>
+
+<style>
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 0.7rem 1.4rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
+  }
+
+  .btn:active {
+    transform: translateY(1px);
+  }
+
+  .btn--lg {
+    padding: 0.95rem 1.9rem;
+    font-size: var(--text-base);
+  }
+
+  .btn--primary {
+    background: var(--terracotta);
+    color: var(--text-inverse);
+  }
+
+  .btn--primary:hover {
+    background: var(--terracotta-dark);
+    color: var(--text-inverse);
+  }
+
+  .btn--ghost {
+    background: transparent;
+    border-color: var(--border-strong);
+    color: var(--burgundy);
+  }
+
+  .btn--ghost:hover {
+    border-color: var(--terracotta);
+    background: var(--blush-100);
+    color: var(--burgundy);
+  }
+
+  .btn--whatsapp {
+    background: #1f7a4d;
+    color: #ffffff;
+  }
+
+  .btn--whatsapp:hover {
+    background: #19603d;
+    color: #ffffff;
+  }
+</style>

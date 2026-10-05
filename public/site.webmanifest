@@ -1,0 +1,19 @@
+{
+  "name": "Soul and Body",
+  "short_name": "Soul and Body",
+  "description": "Centro de estética en Envigado, Antioquia. Facial, corporal, drenaje linfático y acompañamiento postquirúrgico.",
+  "lang": "es-CO",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FDF8F6",
+  "theme_color": "#6B3238",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

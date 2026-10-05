@@ -4,24 +4,704 @@
 export const prerender = true;
 
 import Base from '../layouts/Base.astro';
-import { loadSiteConfig } from '../lib/config.ts';
+import Button from '../components/Button.astro';
+import ServiceCard from '../components/ServiceCard.astro';
+import { formatPrice, loadSiteConfig, whatsappLink } from '../lib/config.ts';
 
 // Se ejecuta en workerd durante el build, con el binding D1 disponible: la
-// configuración del negocio queda horneada en el HTML estático.
+// configuración del negocio queda horneada en el HTML.
 const config = await loadSiteConfig();
-const { business } = config;
+const { business, services, schedule } = config;
+
+const phone = business.phoneE164;
+const whatsappGeneral = whatsappLink(
+  business.whatsappE164,
+  `Hola ${business.name}, quiero información sobre sus servicios.`,
+);
+
+const days: { label: string; window: { open: string; close: string } | null }[] = [
+  { label: 'Lunes', window: schedule['1'] ?? null },
+  { label: 'Martes', window: schedule['2'] ?? null },
+  { label: 'Miércoles', window: schedule['3'] ?? null },
+  { label: 'Jueves', window: schedule['4'] ?? null },
+  { label: 'Viernes', window: schedule['5'] ?? null },
+  { label: 'Sábado', window: schedule['6'] ?? null },
+  { label: 'Domingo', window: schedule['0'] ?? null },
+];
+
+const steps = [
+  {
+    title: 'Elige tu servicio',
+    body: 'Facial, corporal, drenaje linfático o el acompañamiento postquirúrgico. Cada uno con su duración y su precio a la vista.',
+  },
+  {
+    title: 'Elige día y hora',
+    body: 'Solo se muestran horarios realmente libres. Si alguien Agenda mientras tú decides, el sistema lo bloquea al instante.',
+  },
+  {
+    title: 'Te confirmamos',
+    body: 'Recibes un código de reserva y te escribimos por WhatsApp para confirmar los detalles de tu cita.',
+  },
+];
+
+const reasons = [
+  {
+    title: 'Criterio profesional',
+    body: 'Antes de cada tratamiento hacemos una valoración. Si lo que pediste no es lo que tu piel necesita, te lo decimos.',
+  },
+  {
+    title: 'Atención de una en una',
+    body: 'Un consultorio, una agenda. Nadie espera y nadie es interrumpida mientras estás en la silla.',
+  },
+  {
+    title: 'Acompañamiento real',
+    body: 'Sobre todo en el postquirúrgico: la recuperación no se improvisa y aquí te guiamos sesión a sesión.',
+  },
+];
+
+const faqs = [
+  {
+    q: '¿Necesito pagar algo para reservar?',
+    a: 'No. La reserva es gratuita y no implica ningún pago adelantado. Te confirmamos la cita por WhatsApp.',
+  },
+  {
+    q: '¿Puedo cancelar o cambiar mi cita?',
+    a: `Sí, escríbenos por WhatsApp con al menos ${config.policy.cancellationHours} horas de anticipación para que alcancemos a llenar ese horario.`,
+  },
+  {
+    q: '¿Atienden menores de edad?',
+    a: `No. Atendemos únicamente a mayores de ${config.policy.minimumAge} años, según lo que establece la Ley 1799 de 2016 en Colombia.`,
+  },
+  {
+    q: '¿Con cuánta antelación puedo agendar?',
+    a: `Desde ${Math.round(config.policy.minLeadMinutes / 60)} horas antes de la cita y hasta ${config.policy.horizonDays} días vista.`,
+  },
+  {
+    q: '¿Qué llevo a la cita?',
+    a: 'Ven con la piel limpia y sin maquillaje si el tratamiento es facial. Para el postquirúrgico trae las indicaciones de tu cirujano.',
+  },
+  {
+    q: '¿Puedo pagar con Nequi o por transferencia?',
+    a: `Sí. Se puede pagar en efectivo, con tarjeta, por transferencia o Nequi. Aceptamos ${business.paymentAccepted.toLowerCase()}.`,
+  },
+];
 ---
 
 <Base
-  title="Soul and Body | Estética en Envigado, Antioquia"
-  description="Centro de estética en Envigado. Facial, corporal, drenaje linfático y acompañamiento postquirúrgico. Reserva tu cita por WhatsApp."
+  title={`${business.name} | Estética en ${business.city}, ${business.department}`}
+  description={`Centro de estética en ${business.city}, ${business.department}. Facial, corporal, drenaje linfático y acompañamiento postquirúrgico. Reserva tu cita por WhatsApp o en línea.`}
   config={config}
 >
-  <main id="contenido" class="container section">
-    <p class="eyebrow">Fase 0 · andamiaje</p>
-    <h1>{business.name}</h1>
-    <p class="lead">
-      {business.tagline}. {config.services.length} servicios disponibles.
-    </p>
-  </main>
+  <!-- ── Portada ──────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="container hero__inner">
+      <div class="hero__copy">
+        <p class="eyebrow">{business.tagline}</p>
+        <h1 class="hero__title">Cuidado de tu piel<br />con criterio profesional</h1>
+        <p class="lead hero__lead">
+          Tratamientos de estética en {business.city}, atención de una en una y una valoración
+          honesta antes de cada procedimiento. Reserva tu cita en menos de un minuto.
+        </p>
+
+        <div class="hero__actions">
+          <Button href="/#reserva" size="lg">Reservar cita</Button>
+          <Button href={whatsappGeneral} variant="whatsapp" size="lg" external>
+            Escribir por WhatsApp
+          </Button>
+        </div>
+
+        <ul class="hero__facts">
+          <li>{config.policy.horizonDays} días vista</li>
+          <li>Confirmación por WhatsApp</li>
+          <li>Sin pago adelantado</li>
+        </ul>
+      </div>
+
+      <div class="hero__media">
+        <div class="hero__frame media-frame" aria-hidden="true">
+          <span class="hero__frame-note">Foto del consultorio</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Servicios ────────────────────────────────────────────────────── -->
+  <section class="section section--alt" id="servicios">
+    <div class="container">
+      <p class="eyebrow">Qué hacemos</p>
+      <h2 class="section__title">Nuestros servicios</h2>
+      <p class="section__intro">
+        Cada tratamiento tiene su duración y su precio. Todos se pueden reservar directamente desde
+        este sitio.
+      </p>
+
+      <ul class="grid grid--services">
+        {services.map((service) => <li><ServiceCard service={service} /></li>)}
+      </ul>
+
+      <p class="section__footnote">
+        ¿No ves lo que buscas? Escríbenos y te orientamos.
+        <a href={whatsappGeneral} target="_blank" rel="noopener">Consultar por WhatsApp</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Cómo reservar ─────────────────────────────────────────────────── -->
+  <section class="section" id="como-reservar">
+    <div class="container">
+      <p class="eyebrow">Reservar</p>
+      <h2 class="section__title">Tu cita en tres pasos</h2>
+      <p class="section__intro">Sin llamadas, sin esperas. Tú eliges el día y la hora.</p>
+
+      <ol class="grid grid--steps">
+        {
+          steps.map((step, index) => (
+            <li class="step">
+              <span class="step__number">{index + 1}</span>
+              <h3 class="step__title">{step.title}</h3>
+              <p class="step__body">{step.body}</p>
+            </li>
+          ))
+        }
+      </ol>
+
+      <div class="section__cta">
+        <Button href="/#reserva" size="lg">Quiero mi cita</Button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Reservador ────────────────────────────────────────────────────── -->
+  <section class="section section--booking" id="reserva">
+    <div class="container booking">
+      <div class="booking__copy">
+        <p class="eyebrow">Agenda</p>
+        <h2 class="section__title">Elige tu servicio y tu horario</h2>
+        <p class="section__intro">
+          Verás solo las horas realmente disponibles. Puedes confirmar o cancelar por WhatsApp.
+        </p>
+      </div>
+
+      <!-- El asistente de reserva entra aquí en la fase siguiente. Mientras tanto
+           la vía principal es WhatsApp, que es lo que mejor convierte. -->
+      <div class="booking__panel" id="booking-widget">
+        <p class="booking__pending">Cargando disponibilidad…</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Nosotros ─────────────────────────────────────────────────────── -->
+  <section class="section section--alt" id="nosotros">
+    <div class="container nosotros">
+      <div>
+        <p class="eyebrow">Quiénes somos</p>
+        <h2 class="section__title">Un consultorio pequeño, a propósito</h2>
+        <p class="section__intro">
+          {business.name} es el espacio de {business.owner} en {business.city}. Trabajamos con
+          pocos turnos al día para poder atender a cada persona sin correr.
+        </p>
+        <ul class="reasons">
+          {
+            reasons.map((reason) => (
+              <li class="reason">
+                <h3 class="reason__title">{reason.title}</h3>
+                <p class="reason__body">{reason.body}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <div class="nosotros__media">
+        <div class="media-frame nosotros__frame" aria-hidden="true">
+          <span class="hero__frame-note">Foto de {business.owner}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Visítanos ─────────────────────────────────────────────────────── -->
+  <section class="section" id="visita">
+    <div class="container visita">
+      <div>
+        <p class="eyebrow">Dónde estamos</p>
+        <h2 class="section__title">{business.city}, {business.department}</h2>
+
+        <dl class="visita__data">
+          <div class="visita__row">
+            <dt>Dirección</dt>
+            <dd>
+              {business.address}<br />
+              {business.city}, {business.department}
+            </dd>
+          </div>
+          <div class="visita__row">
+            <dt>Teléfono</dt>
+            <dd><a href={`tel:${phone}`}>{business.phoneDisplay}</a></dd>
+          </div>
+          <div class="visita__row">
+            <dt>Instagram</dt>
+            <dd><a href={business.instagram} rel="me noopener">{business.instagramHandle}</a></dd>
+          </div>
+          <div class="visita__row">
+            <dt>Formas de pago</dt>
+            <dd>{business.paymentAccepted}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="visita__horarios">
+        <h3 class="visita__horarios-title">Horario de atención</h3>
+        <ul class="hours-table">
+          {
+            days.map(({ label, window }) => (
+              <li class:list={['hours-table__row', !window && 'is-closed']}>
+                <span>{label}</span>
+                <span class="hours-table__value">
+                  {window ? `${window.open} – ${window.close}` : 'Cerrado'}
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+        <a
+          class="visita__map"
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${business.address}, ${business.city}`)}`}
+          target="_blank"
+          rel="noopener"
+        >
+          Cómo llegar →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Preguntas ─────────────────────────────────────────────────────── -->
+  <section class="section section--alt" id="preguntas">
+    <div class="container-narrow">
+      <p class="eyebrow">Dudas</p>
+      <h2 class="section__title">Preguntas frecuentes</h2>
+
+      <div class="faq">
+        {
+          faqs.map((faq) => (
+            <details class="faq__item">
+              <summary class="faq__q">{faq.q}</summary>
+              <p class="faq__a">{faq.a}</p>
+            </details>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Cierre ───────────────────────────────────────────────────────── -->
+  <section class="closing">
+    <div class="container-narrow closing__inner">
+      <h2 class="closing__title">¿Lista para tu cita?</h2>
+      <p class="closing__body">
+        Reserva en línea o escríbenos. Te respondemos con la hora disponible más cercana.
+      </p>
+      <div class="closing__actions">
+        <Button href="/#reserva" size="lg">Reservar ahora</Button>
+        <Button href={whatsappGeneral} variant="whatsapp" size="lg" external>WhatsApp</Button>
+      </div>
+    </div>
+  </section>
 </Base>
+
+<style>
+  /* ── Portada ─────────────────────────────────────────────────────────── */
+  .hero {
+    padding-block: var(--space-9) var(--space-8);
+    background:
+      radial-gradient(
+        ellipse 80% 60% at 80% 0%,
+        var(--blush-100) 0%,
+        transparent 60%
+      ),
+      var(--bg);
+  }
+
+  .hero__inner {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: var(--space-8);
+    align-items: center;
+  }
+
+  .hero__title {
+    margin-bottom: var(--space-4);
+  }
+
+  .hero__lead {
+    max-width: 46ch;
+    margin-bottom: var(--space-6);
+  }
+
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .hero__facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+    margin: 0;
+    padding: var(--space-4) 0 0;
+    border-top: 1px solid var(--border);
+    list-style: none;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .hero__facts li::before {
+    content: '·';
+    margin-right: var(--space-2);
+    color: var(--gold);
+    font-size: 1.2em;
+  }
+
+  .hero__frame {
+    aspect-ratio: 4 / 5;
+  }
+
+  .hero__frame-note {
+    position: absolute;
+    inset: auto var(--space-4) var(--space-4);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .hero__media {
+    position: relative;
+  }
+
+  /* ── Títulos de sección ──────────────────────────────────────────────── */
+  .section__title {
+    margin-bottom: var(--space-3);
+  }
+
+  .section__intro {
+    max-width: 52ch;
+    margin-bottom: var(--space-6);
+    color: var(--text-soft);
+  }
+
+  .section__cta {
+    margin-top: var(--space-7);
+    text-align: center;
+  }
+
+  .section__footnote {
+    margin-top: var(--space-6);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .section__footnote a {
+    color: var(--terracotta-dark);
+  }
+
+  /* ── Rejillas ───────────────────────────────────────────────────────── */
+  .grid {
+    display: grid;
+    gap: var(--space-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .grid--services {
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  }
+
+  .grid--steps {
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    counter-reset: step;
+  }
+
+  /* ── Pasos ──────────────────────────────────────────────────────────── */
+  .step {
+    padding: var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .step__number {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-bottom: var(--space-4);
+    background: var(--blush-100);
+    border: 1px solid var(--gold);
+    border-radius: var(--radius-full);
+    color: var(--burgundy);
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+  }
+
+  .step__title {
+    margin-bottom: var(--space-2);
+    font-size: var(--text-lg);
+  }
+
+  .step__body {
+    color: var(--text-soft);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  /* ── Reservador ─────────────────────────────────────────────────────── */
+  .section--booking {
+    background: var(--burgundy);
+    color: var(--blush-100);
+  }
+
+  .booking {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: var(--space-7);
+    align-items: start;
+  }
+
+  .section--booking .eyebrow {
+    color: var(--gold-soft);
+  }
+
+  .section--booking .section__title {
+    color: var(--blush-50);
+  }
+
+  .section--booking .section__intro {
+    color: rgb(249 232 228 / 0.8);
+  }
+
+  .booking__panel {
+    padding: var(--space-6);
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    color: var(--text);
+  }
+
+  .booking__pending {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  /* ── Nosotros ───────────────────────────────────────────────────────── */
+  .nosotros {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: var(--space-8);
+    align-items: center;
+  }
+
+  .reasons {
+    display: grid;
+    gap: var(--space-4);
+    margin: var(--space-6) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .reason__title {
+    margin-bottom: var(--space-1);
+    font-size: var(--text-lg);
+  }
+
+  .reason__body {
+    color: var(--text-soft);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  .nosotros__frame {
+    aspect-ratio: 3 / 4;
+  }
+
+  /* ── Visítanos ──────────────────────────────────────────────────────── */
+  .visita {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: var(--space-8);
+    align-items: start;
+  }
+
+  .visita__data {
+    display: grid;
+    gap: var(--space-4);
+    margin: var(--space-5) 0 0;
+  }
+
+  .visita__row {
+    display: grid;
+    grid-template-columns: 9rem 1fr;
+    gap: var(--space-3);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .visita__row dt {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .visita__row dd {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: var(--text-sm);
+  }
+
+  .visita__row a {
+    color: var(--terracotta-dark);
+  }
+
+  .visita__horarios {
+    padding: var(--space-6);
+    background: var(--bg-alt);
+    border-radius: var(--radius-lg);
+  }
+
+  .visita__horarios-title {
+    margin-bottom: var(--space-4);
+    font-size: var(--text-xl);
+  }
+
+  .hours-table {
+    margin: 0 0 var(--space-4);
+    padding: 0;
+    list-style: none;
+  }
+
+  .hours-table__row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-block: 0.45rem;
+    border-bottom: 1px solid var(--border);
+    font-size: var(--text-sm);
+  }
+
+  .hours-table__row.is-closed {
+    color: var(--text-muted);
+  }
+
+  .hours-table__value {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .visita__map {
+    display: inline-block;
+    color: var(--terracotta-dark);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  /* ── Preguntas ──────────────────────────────────────────────────────── */
+  .faq {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .faq__item {
+    padding: var(--space-4) var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .faq__q {
+    cursor: pointer;
+    color: var(--burgundy);
+    font-weight: 600;
+    list-style: none;
+  }
+
+  /* La flecha nativa del <summary> estorba; se sustituye por un signo propio. */
+  .faq__q::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq__q::before {
+    content: '+';
+    display: inline-block;
+    width: 1.25rem;
+    color: var(--terracotta);
+    font-weight: 700;
+  }
+
+  .faq__item[open] .faq__q::before {
+    content: '−';
+  }
+
+  .faq__a {
+    margin-top: var(--space-3);
+    padding-left: 1.25rem;
+    color: var(--text-soft);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  /* ── Cierre ─────────────────────────────────────────────────────────── */
+  .closing {
+    padding-block: var(--space-8);
+    background: var(--bg);
+    text-align: center;
+  }
+
+  .closing__title {
+    margin-bottom: var(--space-3);
+  }
+
+  .closing__body {
+    margin: 0 auto var(--space-6);
+    color: var(--text-soft);
+  }
+
+  .closing__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-3);
+  }
+
+  /* ── Adaptaciones ───────────────────────────────────────────────────── */
+  @media (width < 62rem) {
+    .hero__inner,
+    .nosotros,
+    .visita,
+    .booking {
+      grid-template-columns: 1fr;
+    }
+
+    .hero__media,
+    .nosotros__media {
+      order: -1;
+      max-width: 26rem;
+    }
+
+    .hero__frame {
+      aspect-ratio: 16 / 10;
+    }
+  }
+
+  @media (width < 40rem) {
+    .visita__row {
+      grid-template-columns: 1fr;
+      gap: var(--space-1);
+    }
+  }
+</style>

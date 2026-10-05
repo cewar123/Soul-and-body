@@ -1,0 +1,156 @@
+---
+import type { BusinessInfo } from '../lib/config.ts';
+
+interface Props {
+  business: BusinessInfo;
+}
+
+const { business } = Astro.props;
+const phone = business.phoneE164;
+const current = Astro.url.pathname;
+
+const links = [
+  { href: '/#servicios', label: 'Servicios' },
+  { href: '/#como-reservar', label: 'Cómo reservar' },
+  { href: '/#nosotros', label: 'Nosotros' },
+  { href: '/#visita', label: 'Visítanos' },
+  { href: '/#preguntas', label: 'Preguntas' },
+];
+---
+
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/" aria-label={`${business.name}, ir al inicio`}>
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__text">
+        <span class="brand__name">{business.name}</span>
+        <span class="brand__place">{business.tagline}</span>
+      </span>
+    </a>
+
+    <nav class="nav" aria-label="Principal">
+      <ul class="nav__list">
+        {
+          links.map((link) => (
+            <li>
+              <a class="nav__link" href={link.href}>
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="site-header__actions">
+      <a class="btn btn--ghost" href={`tel:${phone}`}>Llamar</a>
+      <a class="btn btn--primary" href="/#reserva">Reservar cita</a>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .site-header__inner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    min-height: 4.5rem;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--burgundy);
+    text-decoration: none;
+    margin-right: auto;
+  }
+
+  /* Marca circular con el mismo motivo del logo: aro dorado y punto coral. */
+  .brand__mark {
+    width: 2.25rem;
+    height: 2.25rem;
+    flex-shrink: 0;
+    border-radius: var(--radius-full);
+    background:
+      radial-gradient(circle at 50% 34%, var(--terracotta) 0 14%, transparent 15%),
+      linear-gradient(160deg, var(--blush-100), var(--blush-200));
+    box-shadow: inset 0 0 0 1.5px var(--gold);
+  }
+
+  .brand__text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+
+  .brand__name {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  .brand__place {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .nav__list {
+    display: flex;
+    gap: var(--space-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .nav__link {
+    color: var(--text-soft);
+    font-size: var(--text-sm);
+    text-decoration: none;
+    padding-block: var(--space-2);
+    border-bottom: 1px solid transparent;
+    transition: color var(--duration-fast), border-color var(--duration-fast);
+  }
+
+  .nav__link:hover {
+    color: var(--burgundy);
+    border-bottom-color: var(--gold);
+  }
+
+  .site-header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  /* La marca "actual" se marca en el pie, no en la cabecera: aquí todo son
+     anclas a secciones de la home. */
+
+  @media (width < 62rem) {
+    .nav {
+      display: none;
+    }
+  }
+
+  @media (width < 34rem) {
+    .brand__place {
+      display: none;
+    }
+
+    .site-header__actions .btn--ghost {
+      display: none;
+    }
+  }
+</style>

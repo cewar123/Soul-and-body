@@ -1,0 +1,51 @@
+---
+export const prerender = true;
+
+import Base from '../layouts/Base.astro';
+import { loadSiteConfig } from '../lib/config.ts';
+
+const config = await loadSiteConfig();
+const { business } = config;
+---
+
+<Base
+  title="Página no encontrada | Soul and Body"
+  description="La página que buscas no existe o cambió de sitio."
+  config={config}
+  noindex
+>
+  <main id="contenido" class="container section notfound">
+    <p class="eyebrow">Error 404</p>
+    <h1>Esta página no está aquí</h1>
+    <p class="lead">
+      Puede que el enlace haya cambiado. Desde aquí puedes volver al inicio o escribirnos.
+    </p>
+    <div class="notfound__actions">
+      <a class="btn btn--primary btn--lg" href="/">Ir al inicio</a>
+      <a
+        class="btn btn--ghost btn--lg"
+        href={`https://wa.me/${business.whatsappE164}`}
+        target="_blank"
+        rel="noopener">Escribir por WhatsApp</a
+      >
+    </div>
+  </main>
+</Base>
+
+<style>
+  .notfound {
+    min-height: 55vh;
+    padding-block: var(--space-9);
+  }
+
+  .notfound h1 {
+    margin-bottom: var(--space-3);
+  }
+
+  .notfound__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+  }
+</style>
