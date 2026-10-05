@@ -71,10 +71,24 @@ export const idSchema = z.coerce.number().int().positive();
 
 // --- Configuración pública --------------------------------------------------
 
-export const availabilityQuerySchema = z.object({
-  service: idSchema,
-  date: dateSchema,
-});
+/**
+ * Consulta de disponibilidad. Acepta un día concreto o un mes entero para
+ * pintar el calendario, pero al menos uno de los dos.
+ */
+export const availabilityQuerySchema = z
+  .object({
+    service: idSchema,
+    date: dateSchema.optional(),
+    month: z
+      .string()
+      .regex(/^\d{4}-\d{2}$/, 'Usa el formato AAAA-MM.')
+      .optional(),
+  })
+  .refine((value) => Boolean(value.date ?? value.month), {
+    error: 'Indica un día (date) o un mes (month).',
+  });
+
+export type AvailabilityQueryInput = z.infer<typeof availabilityQuerySchema>;
 
 // --- Creación de cita --------------------------------------------------------
 

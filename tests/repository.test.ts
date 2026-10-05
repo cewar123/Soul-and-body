@@ -204,7 +204,10 @@ describe('updateAppointmentStatus', () => {
       .bind(created.appointment.id)
       .all<{ from_status: string; to_status: string; actor: string }>();
 
+    // El primero es el de creación; createAppointment lo deja registrado para
+    // que el historial no tenga un hueco al principio.
     expect(results).toEqual([
+      { from_status: null, to_status: 'pending', actor: 'system' },
       { from_status: 'pending', to_status: 'confirmed', actor: 'admin' },
       { from_status: 'confirmed', to_status: 'completed', actor: 'admin' },
     ]);
@@ -221,7 +224,9 @@ describe('updateAppointmentStatus', () => {
       .prepare('SELECT * FROM appointment_events WHERE appointment_id = ?')
       .bind(created.appointment.id)
       .all();
-    expect(results).toHaveLength(1);
+    // creación + el primer 'confirmed'. El segundo 'confirmed' idéntico se
+    // ignora: repetir el mismo estado no genera historial.
+    expect(results).toHaveLength(2);
   });
 
   it('devuelve null si la cita no existe', async () => {

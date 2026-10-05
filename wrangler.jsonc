@@ -29,5 +29,11 @@
 
   "observability": {
     "enabled": true
+  },
+
+  "vars": {
+    // Clave PÚBLICA de Turnstile (la secreta va como secret, no aquí).
+    // Vacía = el widget omite el challenge, útil en desarrollo.
+    "TURNSTILE_SITE_KEY": ""
   }
 }

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { publicRoutes } from './routes/public.ts';
 
 /**
  * Router de la API.
@@ -36,6 +37,18 @@ api.use('*', async (c, next) => {
   await next();
 });
 
+api.get('/api/health', (c) =>
+  c.json({
+    ok: true,
+    service: 'soul-and-body',
+    time: new Date().toISOString(),
+    requestId: c.get('requestId'),
+  }),
+);
+
+// Rutas públicas: catálogo, disponibilidad y creación de citas.
+api.route('/', publicRoutes);
+
 // Cualquier ruta /api que no exista devuelve JSON, no el HTML del 404 de Astro.
 api.notFound((c) => c.json({ error: 'not_found', message: 'Ese recurso no existe.' }, 404));
 
@@ -51,15 +64,6 @@ api.onError((error, c) => {
     500,
   );
 });
-
-api.get('/api/health', (c) =>
-  c.json({
-    ok: true,
-    service: 'soul-and-body',
-    time: new Date().toISOString(),
-    requestId: c.get('requestId'),
-  }),
-);
 
 /**
  * Un Hono app implementa `{ fetch(request, env, ctx) }`, así que sirve como

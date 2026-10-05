@@ -1,0 +1,1094 @@
+---
+/**
+ * Asistente de reserva.
+ *
+ * Cuatro pasos en JavaScript nativo, sin framework. Motivo: el booking es el
+ * único elemento interactivo complejo del sitio y arrastrar React/Vue por él
+ * costaría más bundle del que aporta. La lógica de disponibilidad ya está en
+ * `src/lib/slots.ts` y se ejecuta en el servidor; aquí solo hay presentación.
+ *
+ * Accesibilidad: es un `role="group"` con `aria-live` en los cambios de paso, y
+ * todo el control es con teclado (los horarios son botones de verdad, no divs).
+ */
+
+interface Props {
+  /** Datos horneados en el HTML: el widget funciona aunque /api/config tarde. */
+  services: {
+    id: number;
+    slug: string;
+    name: string;
+    description: string;
+    durationMin: number;
+    priceCop: number;
+    priceFormatted: string;
+  }[];
+  policy: {
+    minLeadMinutes: number;
+    horizonDays: number;
+    minimumAge: number;
+  };
+  whatsappE164: string;
+}
+
+const { services, policy, whatsappE164 } = Astro.props;
+const today = new Date().toISOString().slice(0, 10);
+const horizon = new Date(Date.now() + policy.horizonDays * 86_400_000).toISOString().slice(0, 10);
+---
+
+<div class="booking" id="booking" data-min-age={policy.minimumAge} data-today={today} data-horizon={horizon}>
+  <ol class="booking__steps" aria-hidden="true">
+    <li class="booking__step is-active" data-step-indicator="1"><span>1</span> Servicio</li>
+    <li class="booking__step" data-step-indicator="2"><span>2</span> Día y hora</li>
+    <li class="booking__step" data-step-indicator="3"><span>3</span> Tus datos</li>
+    <li class="booking__step" data-step-indicator="4"><span>4</span> Confirmación</li>
+  </ol>
+
+  <div class="booking__alert" role="alert" hidden data-alert></div>
+
+  <!-- ── Paso 1 · Servicio ─────────────────────────────────────────────── -->
+  <section class="booking__panel" data-panel="1" aria-labelledby="step1-title">
+    <h3 class="booking__title" id="step1-title">¿Qué te gustaría hacerte?</h3>
+    <ul class="choice-list" role="radiogroup" aria-labelledby="step1-title">
+      {
+        services.map((service) => (
+          <li>
+            <button class="choice" type="button" role="radio" aria-checked="false" data-service={service.id}>
+              <span class="choice__body">
+                <span class="choice__name">{service.name}</span>
+                <span class="choice__desc">{service.description}</span>
+              </span>
+              <span class="choice__meta">
+                <span class="choice__duration">{service.durationMin} min</span>
+                <span class="choice__price">{service.priceFormatted}</span>
+              </span>
+            </button>
+          </li>
+        ))
+      }
+    </ul>
+    <div class="booking__nav booking__nav--end">
+      <button class="btn btn--primary" type="button" data-next hidden>Siguiente</button>
+    </div>
+  </section>
+
+  <!-- ── Paso 2 · Día y hora ───────────────────────────────────────────── -->
+  <section class="booking__panel" data-panel="2" aria-labelledby="step2-title" hidden>
+    <h3 class="booking__title" id="step2-title">Elige día y hora</h3>
+
+    <div class="picker">
+      <div class="picker__days">
+        <div class="picker__days-head">
+          <button class="picker__nav" type="button" data-month-prev aria-label="Mes anterior">‹</button>
+          <strong data-month-label>—</strong>
+          <button class="picker__nav" type="button" data-month-next aria-label="Mes siguiente">›</button>
+        </div>
+        <div class="picker__grid" role="group" aria-label="Días disponibles" data-days></div>
+        <p class="picker__legend">
+          <span class="dot dot--free"></span> Disponible
+          <span class="dot dot--full"></span> Sin cupos
+          <span class="dot dot--closed"></span> Cerrado
+        </p>
+      </div>
+
+      <div class="picker__slots">
+        <p class="picker__slots-title" data-slots-title>Selecciona un día</p>
+        <div class="slots" role="radiogroup" aria-live="polite" data-slots></div>
+      </div>
+    </div>
+
+    <div class="booking__nav">
+      <button class="btn btn--ghost" type="button" data-prev>Atrás</button>
+      <button class="btn btn--primary" type="button" data-next hidden>Continuar</button>
+    </div>
+  </section>
+
+  <!-- ── Paso 3 · Datos ────────────────────────────────────────────────── -->
+  <section class="booking__panel" data-panel="3" aria-labelledby="step3-title" hidden>
+    <h3 class="booking__title" id="step3-title">Tus datos</h3>
+    <p class="booking__hint" data-summary></p>
+
+    <form class="form" data-form novalidate>
+      <div class="form__row">
+        <label class="form__field">
+          <span class="form__label">Nombre completo <b aria-hidden="true">*</b></span>
+          <input type="text" name="name" autocomplete="name" required maxlength="120" />
+        </label>
+        <label class="form__field">
+          <span class="form__label">Celular <b aria-hidden="true">*</b></span>
+          <input
+            type="tel"
+            name="phone"
+            autocomplete="tel"
+            inputmode="tel"
+            required
+            maxlength="30"
+            placeholder="300 123 4567"
+          />
+        </label>
+      </div>
+
+      <div class="form__row">
+        <label class="form__field">
+          <span class="form__label">Correo <span class="form__opt">(opcional)</span></span>
+          <input type="email" name="email" autocomplete="email" maxlength="160" />
+        </label>
+        <label class="form__field">
+          <span class="form__label">Tu edad <span class="form__opt">(para verificar)</span></span>
+          <input type="number" name="age" min="1" max="120" inputmode="numeric" />
+        </label>
+      </div>
+
+      <label class="form__field">
+        <span class="form__label">¿Algo que debamos saber? <span class="form__opt">(opcional)</span></span>
+        <textarea name="notes" rows="3" maxlength="800" placeholder="Alergias, contraindicaciones, o simplemente que es tu primera vez."></textarea>
+      </label>
+
+      <!-- Ley 1581 de 2012: el consentimiento de datos de salud va en su propia
+           casilla, separada de los términos. Marcarla es opcional. -->
+      <div class="consent">
+        <label class="consent__box">
+          <input type="checkbox" name="consentHealth" required />
+          <span>
+            <b>Autorizo el tratamiento de los datos de salud que me indiques.</b>
+            Es un dato sensible y por ley necesito tu consentimiento explícito.
+            <a href="/legal/privacidad" target="_blank" rel="noopener">Ver aviso de privacidad</a>.
+          </span>
+        </label>
+        <label class="consent__box">
+          <input type="checkbox" name="consentContact" />
+          <span>
+            Quiero recibir recordatorios de mi cita por WhatsApp o correo.
+          </span>
+        </label>
+        <p class="consent__legal">
+          Al reservar aceptas los <a href="/legal/terminos" target="_blank" rel="noopener">términos y condiciones</a>.
+        </p>
+      </div>
+
+      <!-- Turnstile se inyecta aquí si hay clave configurada. -->
+      <div data-turnstile></div>
+
+      <p class="form__error" role="alert" data-form-error hidden></p>
+
+      <div class="booking__nav">
+        <button class="btn btn--ghost" type="button" data-prev>Atrás</button>
+        <button class="btn btn--primary" type="submit" data-submit>Confirmar reserva</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ── Paso 4 · Confirmación ─────────────────────────────────────────── -->
+  <section class="booking__panel booking__panel--done" data-panel="4" hidden aria-live="polite">
+    <div class="done__icon" aria-hidden="true">✓</div>
+    <h3 class="booking__title">¡Cita reservada!</h3>
+    <p class="done__summary" data-done-summary></p>
+
+    <div class="done__code">
+      <span>Tu código</span>
+      <strong data-done-ref>—</strong>
+    </div>
+
+    <p class="done__notice" data-done-notice></p>
+
+    <div class="done__actions">
+      <a class="btn btn--whatsapp" data-done-whatsapp href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noopener">
+        Confirmar por WhatsApp
+      </a>
+      <button class="btn btn--ghost" type="button" data-restart>Reservar otra cita</button>
+    </div>
+  </section>
+</div>
+
+<script>
+  // ---------------------------------------------------------------------------
+  //  Asistente de reserva — JavaScript nativo, sin dependencias.
+  //
+  //  El servidor es la única autoridad sobre la disponibilidad: este script
+  //  pide horarios, los muestra y al confirmar vuelve a enviar la reserva. Si
+  //  dos personas eligen el mismo hueco a la vez, el índice único de
+  //  `slot_holds` rechaza la segunda y aquí se refleja con un aviso claro.
+  // ---------------------------------------------------------------------------
+
+  declare global {
+    interface Window {
+      turnstile?: {
+        render(el: HTMLElement | string, options: Record<string, unknown>): string;
+        reset(widgetId?: string): void;
+      };
+    }
+  }
+
+  interface ServiceOption {
+    id: number;
+    name: string;
+    durationMin: number;
+    priceFormatted: string;
+  }
+
+  interface SiteConfig {
+    services: ServiceOption[];
+    policy: { minimumAge: number };
+    turnstileSiteKey: string;
+  }
+
+  interface MonthSummary {
+    month: string;
+    days: { date: string; open: boolean; available: boolean }[];
+  }
+
+  interface SlotsResponse {
+    date: string;
+    slots: string[];
+    reason: string | null;
+  }
+
+  const root = document.getElementById('booking');
+  if (root) void start(root);
+  async function start(root: HTMLElement) {
+    const els = {
+      panels: [...root.querySelectorAll<HTMLElement>('[data-panel]')],
+      indicators: [...root.querySelectorAll<HTMLElement>('[data-step-indicator]')],
+      alert: root.querySelector<HTMLElement>('[data-alert]')!,
+      days: root.querySelector<HTMLElement>('[data-days]')!,
+      slots: root.querySelector<HTMLElement>('[data-slots]')!,
+      slotsTitle: root.querySelector<HTMLElement>('[data-slots-title]')!,
+      monthLabel: root.querySelector<HTMLElement>('[data-month-label]')!,
+      form: root.querySelector<HTMLFormElement>('[data-form]')!,
+      summary: root.querySelector<HTMLElement>('[data-summary]')!,
+      formError: root.querySelector<HTMLElement>('[data-form-error]')!,
+      submit: root.querySelector<HTMLButtonElement>('[data-submit]')!,
+      turnstile: root.querySelector<HTMLElement>('[data-turnstile]')!,
+      doneSummary: root.querySelector<HTMLElement>('[data-done-summary]')!,
+      doneRef: root.querySelector<HTMLElement>('[data-done-ref]')!,
+      doneNotice: root.querySelector<HTMLElement>('[data-done-notice]')!,
+      doneWhatsapp: root.querySelector<HTMLAnchorElement>('[data-done-whatsapp]')!,
+    };
+
+    const state = {
+      step: 1,
+      config: null as SiteConfig | null,
+      serviceId: null as number | null,
+      date: null as string | null,
+      time: null as string | null,
+      month: currentMonth(),
+    };
+
+    // ── Utilidades ────────────────────────────────────────────────────────
+
+    const api = async <T,>(path: string): Promise<T> => {
+      const res = await fetch(path, { headers: { Accept: 'application/json' } });
+      const body = (await res.json()) as T & { error?: string; message?: string };
+      if (!res.ok) throw Object.assign(new Error(body?.message ?? 'Algo salió mal.'), {
+        code: body?.error,
+      });
+      return body;
+    };
+
+    function currentMonth(): string {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function shiftMonth(month: string, delta: number): string {
+      const [y, m] = month.split('-').map(Number) as [number, number];
+      const date = new Date(Date.UTC(y, m - 1 + delta, 1));
+      return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+    }
+
+    /** Fecha + hora local de Bogotá → texto largo en español. */
+    function prettyDate(date: string): string {
+      const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+      return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('es-CO', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        timeZone: 'UTC',
+      });
+    }
+
+    function setAlert(message: string | null) {
+      els.alert.textContent = message ?? '';
+      els.alert.hidden = message === null;
+    }
+
+    function showStep(step: number) {
+      state.step = step;
+      els.panels.forEach((panel) => {
+        panel.hidden = Number(panel.dataset.panel) !== step;
+      });
+      els.indicators.forEach((indicator) => {
+        const n = Number(indicator.dataset.stepIndicator);
+        indicator.classList.toggle('is-active', n === step);
+        indicator.classList.toggle('is-done', n < step);
+      });
+      setAlert(null);
+
+      const heading = els.panels.find((p) => !p.hidden)?.querySelector<HTMLElement>('h3');
+      heading?.focus?.();
+      root.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    const service = () => state.config?.services.find((s) => s.id === state.serviceId);
+
+    // ── Paso 1 ────────────────────────────────────────────────────────────
+
+    root.querySelectorAll<HTMLButtonElement>('[data-service]').forEach((button) => {
+      button.addEventListener('click', () => {
+        root.querySelectorAll('[data-service]').forEach((other) => {
+          other.setAttribute('aria-checked', String(other === button));
+          other.classList.toggle('is-selected', other === button);
+        });
+        state.serviceId = Number(button.dataset.service);
+        state.date = null;
+        state.time = null;
+        setNextVisible(root, true);
+      });
+    });
+
+    function setNextVisible(scope: HTMLElement, visible: boolean) {
+      const panel = scope.querySelector<HTMLElement>('[data-panel]:not([hidden])');
+      panel?.querySelector<HTMLButtonElement>('[data-next]')?.toggleAttribute('hidden', !visible);
+    }
+
+    // ── Paso 2 ────────────────────────────────────────────────────────────
+
+    async function loadMonth() {
+      if (!state.serviceId) return;
+      els.days.setAttribute('aria-busy', 'true');
+
+      try {
+        const data = await api<MonthSummary>(
+          `/api/availability?service=${state.serviceId}&month=${state.month}`,
+        );
+        renderDays(data.days);
+      } catch (error) {
+        els.days.textContent = '';
+        setAlert((error as Error).message);
+      } finally {
+        els.days.removeAttribute('aria-busy');
+      }
+    }
+
+    function renderDays(days: MonthSummary['days']) {
+      const [year, month] = state.month.split('-').map(Number) as [number, number];
+      els.monthLabel.textContent = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(
+        'es-CO',
+        { month: 'long', year: 'numeric', timeZone: 'UTC' },
+      );
+
+      const today = root.dataset.today!;
+      const horizon = root.dataset.horizon!;
+      els.days.textContent = '';
+
+      for (const day of days) {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'day';
+        cell.textContent = String(Number(day.date.slice(-2)));
+        cell.dataset.date = day.date;
+        cell.disabled = !day.available || day.date < today || day.date > horizon;
+
+        if (!day.open) cell.classList.add('day--closed');
+        else if (!day.available) cell.classList.add('day--full');
+        else cell.classList.add('day--free');
+
+        if (day.date === state.date) cell.classList.add('is-selected');
+        cell.setAttribute(
+          'aria-label',
+          `${prettyDate(day.date)}${day.open ? '' : ', cerrado'}${day.available ? '' : ', sin cupos'}`,
+        );
+
+        cell.addEventListener('click', () => {
+          state.date = day.date;
+          state.time = null;
+          els.days.querySelectorAll('.day').forEach((d) => d.classList.remove('is-selected'));
+          cell.classList.add('is-selected');
+          void loadSlots();
+        });
+
+        els.days.appendChild(cell);
+      }
+    }
+
+    async function loadSlots() {
+      if (!state.serviceId || !state.date) return;
+      els.slots.textContent = '';
+      els.slotsTitle.textContent = 'Cargando horarios…';
+
+      try {
+        const data = await api<SlotsResponse>(
+          `/api/availability?service=${state.serviceId}&date=${state.date}`,
+        );
+        renderSlots(data);
+      } catch (error) {
+        els.slots.textContent = '';
+        els.slotsTitle.textContent = (error as Error).message;
+        setNextVisible(root, false);
+      }
+    }
+
+    function renderSlots(data: SlotsResponse) {
+      els.slots.textContent = '';
+
+      if (data.slots.length === 0) {
+        els.slotsTitle.textContent = data.reason ?? 'No quedan horarios ese día.';
+        setNextVisible(root, false);
+        return;
+      }
+
+      els.slotsTitle.textContent = `Horarios para el ${prettyDate(data.date ?? state.date!)}`;
+
+      for (const slot of data.slots) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'slot';
+        button.textContent = slot;
+        button.setAttribute('role', 'radio');
+        button.setAttribute('aria-checked', String(slot === state.time));
+
+        button.addEventListener('click', () => {
+          state.time = slot;
+          els.slots.querySelectorAll('.slot').forEach((other) => {
+            other.setAttribute('aria-checked', String(other === button));
+            other.classList.toggle('is-selected', other === button);
+          });
+          setNextVisible(root, true);
+        });
+
+        els.slots.appendChild(button);
+      }
+      setNextVisible(root, false);
+    }
+
+    // ── Paso 3 ────────────────────────────────────────────────────────────
+
+    function fillSummary() {
+      const chosen = service();
+      if (!chosen || !state.date || !state.time) return;
+      els.summary.textContent = `${chosen.name} · ${prettyDate(state.date)} a las ${state.time} · ${chosen.priceFormatted}`;
+    }
+
+    function resetTurnstile() {
+      const widget = els.turnstile.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]');
+      if (widget) widget.value = '';
+    }
+
+    // ── Envío ─────────────────────────────────────────────────────────────
+
+    els.form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      els.formError.hidden = true;
+      els.submit.disabled = true;
+      els.submit.textContent = 'Reservando…';
+
+      const data = new FormData(els.form);
+      const token =
+        els.turnstile.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value ??
+        '';
+
+      try {
+        const res = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            serviceId: state.serviceId,
+            date: state.date,
+            time: state.time,
+            name: data.get('name'),
+            phone: data.get('phone'),
+            email: data.get('email') || '',
+            notes: data.get('notes') || '',
+            age: data.get('age') ? Number(data.get('age')) : undefined,
+            consentHealth: data.get('consentHealth') === 'on',
+            consentContact: data.get('consentContact') === 'on',
+            turnstileToken: token,
+          }),
+        });
+
+        const body = (await res.json()) as {
+          error?: string;
+          message?: string;
+          reference?: string;
+          summary?: string;
+          notice?: string;
+          whatsappLink?: string;
+          fields?: Record<string, string>;
+        };
+
+        if (!res.ok) {
+          // El horario puede haberse ocupado entre el paso 2 y el envío: en ese
+          // caso se vuelve al calendario para que elija otro.
+          if (body.error === 'slot_taken' || body.error === 'slot_unavailable') {
+            els.formError.textContent = body.message ?? 'Ese horario ya no está disponible.';
+            els.formError.hidden = false;
+            showStep(2);
+            await loadSlots();
+          } else {
+            els.formError.textContent =
+              Object.values(body.fields ?? {})[0] ?? body.message ?? 'No pudimos reservar.';
+            els.formError.hidden = false;
+          }
+          resetTurnstile();
+          return;
+        }
+
+        els.doneSummary.textContent = body.summary ?? '';
+        els.doneRef.textContent = body.reference ?? '';
+        els.doneNotice.textContent = body.notice ?? '';
+        if (body.whatsappLink) els.doneWhatsapp.href = body.whatsappLink;
+        showStep(4);
+      } catch {
+        els.formError.textContent = 'No pudimos conectar con el servidor. Revisa tu conexión.';
+        els.formError.hidden = false;
+        resetTurnstile();
+      } finally {
+        els.submit.disabled = false;
+        els.submit.textContent = 'Confirmar reserva';
+      }
+    });
+
+    // ── Navegación ────────────────────────────────────────────────────────
+
+    root.querySelectorAll<HTMLButtonElement>('[data-next]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (state.step === 1 && state.serviceId) {
+          fillSummary();
+          showStep(2);
+          void loadMonth();
+        } else if (state.step === 2 && state.date && state.time) {
+          fillSummary();
+          showStep(3);
+        }
+      });
+    });
+
+    root.querySelectorAll<HTMLButtonElement>('[data-prev]').forEach((button) => {
+      button.addEventListener('click', () => showStep(Math.max(1, state.step - 1)));
+    });
+
+    root.querySelector<HTMLButtonElement>('[data-restart]')?.addEventListener('click', () => {
+      els.form.reset();
+      root.querySelectorAll('[data-service]').forEach((b) => {
+        b.setAttribute('aria-checked', 'false');
+        b.classList.remove('is-selected');
+      });
+      Object.assign(state, { serviceId: null, date: null, time: null });
+      setNextVisible(root, false);
+      showStep(1);
+    });
+
+    root.querySelector('[data-month-prev]')?.addEventListener('click', () => {
+      if (state.month <= (root.dataset.today ?? '').slice(0, 7)) return;
+      state.month = shiftMonth(state.month, -1);
+      void loadMonth();
+    });
+
+    root.querySelector('[data-month-next]')?.addEventListener('click', () => {
+      state.month = shiftMonth(state.month, 1);
+      void loadMonth();
+    });
+
+    // ── Arranque ──────────────────────────────────────────────────────────
+
+    try {
+      state.config = await api<SiteConfig>('/api/config');
+
+      if (state.config.turnstileSiteKey) {
+        await mountTurnstile(state.config.turnstileSiteKey);
+      }
+
+      // Refleja servicios despublicados desde el panel sin tocar el HTML.
+      const ids = new Set(state.config.services.map((s) => s.id));
+      root.querySelectorAll<HTMLButtonElement>('[data-service]').forEach((button) => {
+        if (!ids.has(Number(button.dataset.service))) button.closest('li')?.remove();
+      });
+    } catch {
+      setAlert('No pudimos cargar los horarios. Escríbenos por WhatsApp y te atendemos.');
+    }
+  }
+
+  /**
+   * Carga el script de Turnstile bajo demanda: si el sitio no usa el widget,
+   * nunca se descarga.
+   */
+  function mountTurnstile(siteKey: string): Promise<void> {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.onload = () => {
+        const container = document.querySelector<HTMLElement>('[data-turnstile]');
+        if (!container) return resolve();
+        const widgetId = window.turnstile?.render(container, {
+          sitekey: siteKey,
+          theme: 'light',
+          size: 'flexible',
+        });
+        container.dataset.widgetId = String(widgetId);
+        resolve();
+      };
+      script.onerror = () => resolve();
+      document.head.appendChild(script);
+    });
+  }
+</script>
+
+<style>
+  .booking {
+    padding: var(--space-6);
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    color: var(--text);
+  }
+
+  /* ── Pasos ───────────────────────────────────────────────────────────── */
+  .booking__steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-6);
+    padding: 0 0 var(--space-4);
+    border-bottom: 1px solid var(--border);
+    list-style: none;
+  }
+
+  .booking__step {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .booking__step span {
+    display: grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    background: var(--surface-sunken);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+  }
+
+  .booking__step.is-active {
+    color: var(--burgundy);
+    font-weight: 600;
+  }
+
+  .booking__step.is-active span {
+    background: var(--terracotta);
+    color: var(--text-inverse);
+  }
+
+  .booking__step.is-done span {
+    background: var(--gold-soft);
+    color: var(--burgundy);
+  }
+
+  /* ── Alertas ─────────────────────────────────────────────────────────── */
+  .booking__alert {
+    margin-bottom: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    background: #fdeaea;
+    border-left: 3px solid var(--danger);
+    border-radius: var(--radius-sm);
+    color: #7d2b2d;
+    font-size: var(--text-sm);
+  }
+
+  .booking__title {
+    margin-bottom: var(--space-2);
+    font-size: var(--text-2xl);
+  }
+
+  .booking__hint {
+    margin-bottom: var(--space-5);
+    color: var(--text-soft);
+    font-size: var(--text-sm);
+  }
+
+  .booking__nav {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+  }
+
+  .booking__nav--end {
+    justify-content: flex-end;
+  }
+
+  /* ── Paso 1 · Opciones ────────────────────────────────────────────────── */
+  .choice-list {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .choice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    width: 100%;
+    padding: var(--space-4);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-align: left;
+    transition: border-color var(--duration-fast), background-color var(--duration-fast);
+  }
+
+  .choice:hover {
+    border-color: var(--border-strong);
+    background: var(--blush-50);
+  }
+
+  .choice.is-selected {
+    border-color: var(--terracotta);
+    background: var(--blush-100);
+    box-shadow: inset 0 0 0 1px var(--terracotta);
+  }
+
+  .choice__body {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  .choice__name {
+    color: var(--burgundy);
+    font-weight: 600;
+  }
+
+  .choice__desc {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .choice__meta {
+    display: grid;
+    flex-shrink: 0;
+    justify-items: end;
+    gap: 0.15rem;
+  }
+
+  .choice__duration {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+  }
+
+  .choice__price {
+    color: var(--terracotta-dark);
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Paso 2 · Calendario y horarios ───────────────────────────────────── */
+  .picker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
+  }
+
+  .picker__days-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3);
+    text-transform: capitalize;
+  }
+
+  .picker__nav {
+    width: 2rem;
+    height: 2rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    color: var(--burgundy);
+    line-height: 1;
+  }
+
+  .picker__nav:hover {
+    border-color: var(--terracotta);
+  }
+
+  .picker__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.25rem;
+  }
+
+  .day {
+    aspect-ratio: 1;
+    padding: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .day--free {
+    border-color: var(--gold-soft);
+  }
+
+  .day--full,
+  .day--closed {
+    color: var(--text-muted);
+    background: var(--surface-sunken);
+    text-decoration: line-through;
+  }
+
+  .day:not(:disabled):hover {
+    border-color: var(--terracotta);
+  }
+
+  .day.is-selected {
+    background: var(--terracotta);
+    border-color: var(--terracotta-dark);
+    color: var(--text-inverse);
+    font-weight: 600;
+  }
+
+  .picker__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .dot {
+    display: inline-block;
+    width: 0.6rem;
+    height: 0.6rem;
+    margin-right: 0.3rem;
+    border-radius: var(--radius-full);
+    vertical-align: middle;
+  }
+
+  .dot--free {
+    background: var(--gold-soft);
+  }
+  .dot--full {
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
+  }
+  .dot--closed {
+    background: var(--border-strong);
+  }
+
+  .picker__slots-title {
+    margin-bottom: var(--space-3);
+    color: var(--text-soft);
+    font-size: var(--text-sm);
+    text-transform: capitalize;
+  }
+
+  .slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+    gap: var(--space-2);
+    max-height: 18rem;
+    overflow-y: auto;
+  }
+
+  .slot {
+    padding: var(--space-2) var(--space-1);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--burgundy);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .slot:hover {
+    border-color: var(--terracotta);
+    background: var(--blush-100);
+  }
+
+  .slot.is-selected {
+    background: var(--terracotta);
+    border-color: var(--terracotta-dark);
+    color: var(--text-inverse);
+  }
+
+  /* ── Paso 3 · Formulario ─────────────────────────────────────────────── */
+  .form {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .form__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+  }
+
+  .form__field {
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  .form__label {
+    color: var(--text-soft);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .form__label b {
+    color: var(--terracotta);
+  }
+
+  .form__opt {
+    color: var(--text-muted);
+    text-transform: none;
+  }
+
+  .form input,
+  .form textarea {
+    padding: 0.65rem 0.75rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+  }
+
+  .form input:focus-visible,
+  .form textarea:focus-visible {
+    outline: 2px solid var(--terracotta);
+    outline-offset: 1px;
+  }
+
+  .form__error {
+    padding: var(--space-3) var(--space-4);
+    background: #fdeaea;
+    border-left: 3px solid var(--danger);
+    border-radius: var(--radius-sm);
+    color: #7d2b2d;
+    font-size: var(--text-sm);
+  }
+
+  /* ── Consentimientos ─────────────────────────────────────────────────── */
+  .consent {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--bg-alt);
+    border-radius: var(--radius);
+  }
+
+  .consent__box {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-3);
+    align-items: start;
+    color: var(--text-soft);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    cursor: pointer;
+  }
+
+  .consent__box input {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.15rem;
+    accent-color: var(--terracotta);
+  }
+
+  .consent__box b {
+    color: var(--text);
+  }
+
+  .consent__legal {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  /* ── Paso 4 · Confirmación ───────────────────────────────────────────── */
+  .booking__panel--done {
+    text-align: center;
+  }
+
+  .done__icon {
+    display: grid;
+    place-items: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    margin: 0 auto var(--space-4);
+    background: #e7f0e9;
+    border-radius: var(--radius-full);
+    color: var(--success);
+    font-size: 1.75rem;
+  }
+
+  .done__summary {
+    margin-bottom: var(--space-5);
+    color: var(--text-soft);
+    text-transform: capitalize;
+  }
+
+  .done__code {
+    display: inline-grid;
+    gap: 0.15rem;
+    margin-bottom: var(--space-5);
+    padding: var(--space-3) var(--space-6);
+    background: var(--blush-100);
+    border: 1px dashed var(--gold);
+    border-radius: var(--radius);
+  }
+
+  .done__code span {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+  }
+
+  .done__code strong {
+    color: var(--burgundy);
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    letter-spacing: 0.08em;
+  }
+
+  .done__notice {
+    max-width: 42ch;
+    margin: 0 auto var(--space-5);
+    color: var(--text-soft);
+    font-size: var(--text-sm);
+  }
+
+  .done__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-3);
+  }
+
+  /* ── Adaptaciones ────────────────────────────────────────────────────── */
+  @media (width < 48rem) {
+    .picker,
+    .form__row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* En móvil el nombre del paso estorba más que el número. */
+  @media (width < 34rem) {
+    .booking__step {
+      font-size: 0;
+      gap: 0;
+    }
+  }
+</style>

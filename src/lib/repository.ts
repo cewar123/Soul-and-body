@@ -370,6 +370,14 @@ export async function createAppointment(
         )
         .bind(input.date, slot, reference),
     ),
+    // La cita nace en 'pending'. Dejarlo registrado desde el principio hace que
+    // el historial no tenga un hueco al principio.
+    db
+      .prepare(
+        `INSERT INTO appointment_events (appointment_id, from_status, to_status, actor)
+         VALUES ((SELECT id FROM appointments WHERE reference = ?), NULL, 'pending', 'system')`,
+      )
+      .bind(reference),
   ];
 
   try {

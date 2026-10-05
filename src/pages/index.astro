@@ -6,6 +6,7 @@ export const prerender = true;
 import Base from '../layouts/Base.astro';
 import Button from '../components/Button.astro';
 import ServiceCard from '../components/ServiceCard.astro';
+import BookingWidget from '../components/BookingWidget.astro';
 import { formatPrice, loadSiteConfig, whatsappLink } from '../lib/config.ts';
 
 // Se ejecuta en workerd durante el build, con el binding D1 disponible: la
@@ -182,10 +183,15 @@ const faqs = [
         </p>
       </div>
 
-      <!-- El asistente de reserva entra aquí en la fase siguiente. Mientras tanto
-           la vía principal es WhatsApp, que es lo que mejor convierte. -->
-      <div class="booking__panel" id="booking-widget">
-        <p class="booking__pending">Cargando disponibilidad…</p>
+      <div class="booking__panel">
+        <BookingWidget
+          services={services.map((service) => ({
+            ...service,
+            priceFormatted: formatPrice(service.priceCop),
+          }))}
+          policy={config.policy}
+          whatsappE164={business.whatsappE164}
+        />
       </div>
     </div>
   </section>
@@ -491,11 +497,6 @@ const faqs = [
     background: var(--surface);
     border-radius: var(--radius-lg);
     color: var(--text);
-  }
-
-  .booking__pending {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
   }
 
   /* ── Nosotros ───────────────────────────────────────────────────────── */
