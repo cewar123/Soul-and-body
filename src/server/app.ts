@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { publicRoutes } from './routes/public.ts';
+import { adminRoutes } from './routes/admin.ts';
+import type { AdminSession } from './lib/session.ts';
 
 /**
  * Router de la API.
@@ -26,7 +28,10 @@ export type Bindings = Env;
 export interface AppEnv {
   Bindings: Bindings;
   Variables: {
+    /** Se asigna en el primer middleware; sirve para correlacionar logs. */
     requestId: string;
+    /** La rellena `requireAdmin`. Solo existe en rutas autenticadas. */
+    admin: AdminSession;
   };
 }
 
@@ -48,6 +53,9 @@ api.get('/api/health', (c) =>
 
 // Rutas públicas: catálogo, disponibilidad y creación de citas.
 api.route('/', publicRoutes);
+
+// Panel de administración. Cada ruta comprueba la sesión en su middleware.
+api.route('/', adminRoutes);
 
 // Cualquier ruta /api que no exista devuelve JSON, no el HTML del 404 de Astro.
 api.notFound((c) => c.json({ error: 'not_found', message: 'Ese recurso no existe.' }, 404));

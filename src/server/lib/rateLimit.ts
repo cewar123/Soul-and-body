@@ -27,46 +27,77 @@ export interface RateLimitResult {
   retryAfter: number;
 }
 
-/** Contador de peticiones, en memoria, para no golpear D1 en cada lectura. */
+/** Contadores locales, por isolate. Evita ir a D1 en cada request. */
 const counters = new Map<string, { count: number; expiresAt: number }>();
 
+/** Techo de claves en cache antes de empezar a purgar caducadas. */
+const MAX_CACHE_KEYS = 5000;
+
+/**
+ * Ventana fija, en dos pasos dentro de un batch:
+ *
+ *   1. INSERT … ON CONFLICT DO UPDATE SET count = count + 1
+ *   2. SELECT count
+ *
+ * El batch los hace atómicos y en orden, así que el SELECT ve el incremento.
+ * No se usa `RETURNING` porque D1 no devuelve filas en un upsert, y eso hacía
+ * que el contador se quedara siempre en 1: nadie quedaba bloqueado nunca.
+ */
 export async function consumeRateLimit(
   db: D1Database,
   key: string,
   options: RateLimitOptions,
   now: Date = new Date(),
 ): Promise<RateLimitResult> {
-const nowMs = now.getTime();
+  const nowMs = now.getTime();
   const windowMs = options.windowSeconds * 1000;
   // Inicio de la ventana actual, alineado a la rejilla.
   const windowStart = Math.floor(nowMs / windowMs) * windowMs;
-  const cacheKey = `${options.name}:${key}:${windowStart}`;
   const bucket = `${options.name}:${key}`;
+  const cacheKey = `${bucket}:${windowStart}`;
+  const retryAfter = Math.ceil((windowStart + windowMs - nowMs) / 1000);
 
-  // Camino rápido: si ya contamos esto en este isolate, no vamos a D1.
+  const respond = (count: number): RateLimitResult => ({
+    allowed: count <= options.max,
+    remaining: Math.max(0, options.max - count),
+    retryAfter,
+  });
+
+  // Camino rápido: ya contamos esto en este isolate, no vamos a D1.
   const cached = counters.get(cacheKey);
   if (cached && cached.expiresAt > nowMs) {
-    return {
-      allowed: cached.count < options.max,
-      remaining: Math.max(0, options.max - cached.count),
-      retryAfter: Math.ceil((cached.expiresAt - nowMs) / 1000),
-    };
+    cached.count += 1;
+    return respond(cached.count);
   }
 
-  // `count` se incrementa con UPSERT y se devuelve en la misma sentencia.
-  const row = await db
-    .prepare(
-      `INSERT INTO rate_limits (bucket, window_start, count) VALUES (?, ?, 1)
-         ON CONFLICT (bucket, window_start) DO UPDATE SET count = count + 1
-       RETURNING count`,
-    )
-    .bind(bucket, windowStart)
-    .first<{ count: number }>();
+  const [, read] = await db.batch([
+    db
+      .prepare(
+        `INSERT INTO rate_limits (bucket, window_start, count) VALUES (?, ?, 1)
+           ON CONFLICT (bucket, window_start) DO UPDATE SET count = count + 1`,
+      )
+      .bind(bucket, windowStart),
+    db
+      .prepare('SELECT count FROM rate_limits WHERE bucket = ? AND window_start = ?')
+      .bind(bucket, windowStart),
+  ]);
 
+  // `db.batch()` devuelve un resultado por sentencia y el SELECT ve el
+  // incremento porque van en el mismo lote. Los tipos de D1 marcan el segundo
+  // como opcional aunque con dos sentencias el índice 1 siempre existe.
+  const row = read?.results[0] as { count?: number } | undefined;
   const count = row?.count ?? 1;
+
+  // Cache acotada: si la ventana caducó ya no sirve, así que se descarta al
+  // insertar. Evita que el Map crezca sin límite entre peticiones.
+  if (counters.size > MAX_CACHE_KEYS) {
+    for (const [k, entry] of counters) {
+      if (entry.expiresAt <= nowMs) counters.delete(k);
+    }
+  }
   counters.set(cacheKey, { count, expiresAt: windowStart + windowMs });
 
-  // Limpieza barata y esporádica de ventanas viejas.
+  // Limpieza barata y esporádica de ventanas viejas en la base.
   if (Math.random() < 0.01) {
     void db
       .prepare('DELETE FROM rate_limits WHERE window_start < ?')
@@ -74,11 +105,7 @@ const nowMs = now.getTime();
       .run();
   }
 
-  return {
-    allowed: count <= options.max,
-    remaining: Math.max(0, options.max - count),
-    retryAfter: Math.ceil((windowStart + windowMs - nowMs) / 1000),
-  };
+  return respond(count);
 }
 
 /**

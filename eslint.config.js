@@ -107,6 +107,9 @@ export default ts.config(
       // `declare global { namespace Cloudflare { ... } }` es la forma oficial
       // de ampliar los bindings de Cloudflare para los tests.
       '@typescript-eslint/no-namespace': 'off',
+      // Los tipos de D1 marcan como opcional un resultado de batch que siempre
+      // existe; el optional chaining del test es correcto.
+      '@typescript-eslint/no-unnecessary-condition': 'off',
     },
   },
 );

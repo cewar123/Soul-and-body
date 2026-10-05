@@ -1,0 +1,285 @@
+---
+/**
+ * Panel de administración.
+ *
+ * Todo el contenido sale de /api/admin/* en el navegador: el HTML estático solo
+ * es el armazón. Eso permite que Wendy cambie un precio y lo vea al instante,
+ * sin redesplegar.
+ *
+ * Va con `noindex` para que no aparezca en buscadores, y el login está
+ * separado del contenido para no filtrar la agenda a un motor de búsqueda.
+ */
+export const prerender = true;
+
+import { loadSiteConfig } from '../../lib/config.ts';
+
+const config = await loadSiteConfig();
+const { business } = config;
+---
+
+<!doctype html>
+<html lang="es-CO">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel | {business.name}</title>
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="referrer" content="same-origin" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/admin/admin.css" />
+  </head>
+  <body class="admin">
+    <!-- ── Login ─────────────────────────────────────────────────────── -->
+    <section class="login" id="login" hidden>
+      <form class="login__card" id="login-form">
+        <h1 class="login__title">{business.name}</h1>
+        <p class="login__subtitle">Panel de administración</p>
+
+        <label class="field">
+          <span class="field__label">Usuario</span>
+          <input type="text" name="username" autocomplete="username" required maxlength="60" />
+        </label>
+
+        <label class="field">
+          <span class="field__label">Contraseña</span>
+          <input
+            type="password"
+            name="password"
+            autocomplete="current-password"
+            required
+            maxlength="200"
+          />
+        </label>
+
+        <p class="alert" id="login-error" role="alert" hidden></p>
+
+        <button class="btn btn--primary" type="submit" id="login-submit">Entrar</button>
+
+        <p class="login__back"><a href="/">← Volver al sitio</a></p>
+      </form>
+    </section>
+
+    <!-- ── Panel ─────────────────────────────────────────────────────── -->
+    <div id="app" hidden>
+      <header class="topbar">
+        <div class="topbar__brand">
+          <strong>{business.name}</strong>
+          <span>Panel</span>
+        </div>
+
+        <nav class="tabs" aria-label="Secciones">
+          <button class="tab is-active" type="button" data-tab="agenda">Agenda</button>
+          <button class="tab" type="button" data-tab="servicios">Servicios</button>
+          <button class="tab" type="button" data-tab="fechas">Fechas</button>
+          <button class="tab" type="button" data-tab="ajustes">Ajustes</button>
+        </nav>
+
+        <div class="topbar__right">
+          <span class="topbar__user" id="who"></span>
+          <a class="btn btn--ghost btn--sm" href="/" target="_blank" rel="noopener">Ver sitio</a>
+          <button class="btn btn--ghost btn--sm" type="button" id="logout">Salir</button>
+        </div>
+      </header>
+
+      <p class="alert alert--global" id="global-error" role="alert" hidden></p>
+
+      <main class="content">
+        <!-- ── Agenda ──────────────────────────────────────────────── -->
+        <section class="view" data-view="agenda">
+          <div class="stats" id="stats"></div>
+
+          <div class="toolbar">
+            <div class="toolbar__group">
+              <button class="btn btn--ghost btn--sm" type="button" id="prev-day" aria-label="Día anterior">‹</button>
+              <input type="date" id="filter-date" />
+              <button class="btn btn--ghost btn--sm" type="button" id="next-day" aria-label="Día siguiente">›</button>
+              <button class="btn btn--ghost btn--sm" type="button" id="today">Hoy</button>
+            </div>
+
+            <div class="toolbar__group">
+              <select id="filter-status">
+                <option value="">Todos los estados</option>
+                <option value="pending">Pendientes</option>
+                <option value="confirmed">Confirmadas</option>
+                <option value="completed">Completadas</option>
+                <option value="cancelled">Canceladas</option>
+                <option value="no_show">NoGamadas</option>
+              </select>
+              <input type="search" id="filter-q" placeholder="Buscar nombre, teléfono o código" />
+            </div>
+          </div>
+
+          <div id="day-view"></div>
+          <div id="list-view" hidden></div>
+        </section>
+
+        <!-- ── Servicios ───────────────────────────────────────────── -->
+        <section class="view" data-view="servicios" hidden>
+          <div class="view__head">
+            <h2>Servicios</h2>
+            <p>Cambiar un precio aquí lo refleja el sitio en el siguiente build.</p>
+          </div>
+          <div id="services-list"></div>
+
+          <details class="card">
+            <summary class="card__title">Añadir servicio</summary>
+            <form class="form-grid" id="service-create">
+              <label class="field">
+                <span class="field__label">Nombre</span>
+                <input name="name" required maxlength="120" />
+              </label>
+              <label class="field">
+                <span class="field__label">Identificador (URL)</span>
+                <input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="drenaje-linfatico" />
+              </label>
+              <label class="field">
+                <span class="field__label">Duración (min)</span>
+                <input name="durationMin" type="number" min="15" max="480" step="15" value="60" required />
+              </label>
+              <label class="field">
+                <span class="field__label">Precio (COP)</span>
+                <input name="priceCop" type="number" min="0" step="1000" value="200000" required />
+              </label>
+              <label class="field field--wide">
+                <span class="field__label">Descripción</span>
+                <textarea name="description" rows="2" maxlength="1000"></textarea>
+              </label>
+              <button class="btn btn--primary" type="submit">Crear servicio</button>
+            </form>
+          </details>
+        </section>
+
+        <!-- ── Fechas bloqueadas ──────────────────────────────────── -->
+        <section class="view" data-view="fechas" hidden>
+          <div class="view__head">
+            <h2>Fechas bloqueadas</h2>
+            <p>Vacaciones, festivos o días sin atención. No se podrá reservar en ellas.</p>
+          </div>
+
+          <form class="form-grid form-grid--tight" id="block-create">
+            <label class="field">
+              <span class="field__label">Fecha</span>
+              <input type="date" name="date" required />
+            </label>
+            <label class="field">
+              <span class="field__label">Motivo</span>
+              <input name="reason" maxlength="160" placeholder="Vacaciones" />
+            </label>
+            <button class="btn btn--primary" type="submit">Bloquear</button>
+          </form>
+
+          <div id="blocked-list"></div>
+        </section>
+
+        <!-- ── Ajustes ────────────────────────────────────────────── -->
+        <section class="view" data-view="ajustes" hidden>
+          <div class="view__head">
+            <h2>Ajustes del negocio</h2>
+            <p>
+              Los horarios, textos y precios que se publican. Los cambios aplican a la
+              API de inmediato; la landing prerenderizada los recoge en el próximo build.
+            </p>
+          </div>
+
+          <form id="settings-form">
+            <fieldset class="card">
+              <legend class="card__title">Contacto</legend>
+              <div class="form-grid">
+                <label class="field">
+                  <span class="field__label">Nombre</span>
+                  <input name="business.name" />
+                </label>
+                <label class="field">
+                  <span class="field__label">Responsable</span>
+                  <input name="business.owner" />
+                </label>
+                <label class="field">
+                  <span class="field__label">Teléfono (E.164)</span>
+                  <input name="business.phone_e164" placeholder="+573001234567" />
+                </label>
+                <label class="field">
+                  <span class="field__label">WhatsApp</span>
+                  <input name="business.whatsapp_e164" placeholder="573001234567" />
+                </label>
+                <label class="field field--wide">
+                  <span class="field__label">Dirección</span>
+                  <input name="business.address" />
+                </label>
+                <label class="field">
+                  <span class="field__label">Ciudad</span>
+                  <input name="business.city" />
+                </label>
+                <label class="field">
+                  <span class="field__label">Instagram</span>
+                  <input name="business.instagram" type="url" />
+                </label>
+                <label class="field">
+                  <span class="field__label">Latitud</span>
+                  <input name="business.geo_lat" inputmode="decimal" />
+                </label>
+                <label class="field">
+                  <span class="field__label">Longitud</span>
+                  <input name="business.geo_lng" inputmode="decimal" />
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="card">
+              <legend class="card__title">Horario semanal</legend>
+              <div class="schedule" id="schedule"></div>
+            </fieldset>
+
+            <fieldset class="card">
+              <legend class="card__title">Reservas</legend>
+              <div class="form-grid">
+                <label class="field">
+                  <span class="field__label">Anticipación mínima (min)</span>
+                  <input name="booking.min_lead_minutes" type="number" min="0" />
+                </label>
+                <label class="field">
+                  <span class="field__label">Días vista</span>
+                  <input name="booking.horizon_days" type="number" min="1" max="365" />
+                </label>
+                <label class="field">
+                  <span class="field__label">Tamaño de bloque (min)</span>
+                  <select name="booking.slot_quantum_min">
+                    <option value="15">15</option>
+                    <option value="30">30</option>
+                    <option value="60">60</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span class="field__label">Aviso para cancelar (h)</span>
+                  <input name="booking.cancellation_hours" type="number" min="0" />
+                </label>
+                <label class="field">
+                  <span class="field__label">Edad mínima</span>
+                  <input name="booking.minimum_age" type="number" min="0" max="120" />
+                </label>
+              </div>
+            </fieldset>
+
+            <button class="btn btn--primary" type="submit">Guardar cambios</button>
+          </form>
+
+          <fieldset class="card">
+            <legend class="card__title">Cambiar contraseña</legend>
+            <form class="form-grid" id="password-form">
+              <label class="field field--wide">
+                <span class="field__label">Contraseña actual</span>
+                <input name="currentPassword" type="password" autocomplete="current-password" required />
+              </label>
+              <label class="field field--wide">
+                <span class="field__label">Nueva (12+ caracteres, con mayúscula y número)</span>
+                <input name="newPassword" type="password" autocomplete="new-password" required minlength="12" />
+              </label>
+              <button class="btn btn--primary" type="submit">Cambiar contraseña</button>
+            </form>
+          </fieldset>
+        </section>
+      </main>
+    </div>
+
+    <script src="/admin/admin.js" defer></script>
+  </body>
+</html>

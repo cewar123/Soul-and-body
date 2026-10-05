@@ -24,6 +24,11 @@ export default defineConfig({
           TEST_MIGRATIONS: await readD1Migrations(path.join(import.meta.dirname, 'migrations')),
           // Seeds de seeds/: mismo catálogo y ajustes que producción.
           TEST_SEED: await readD1Migrations(path.join(import.meta.dirname, 'seeds')),
+
+          // Secretos de prueba. El plugin los inyecta como bindings reales, que
+          // es lo que le llega al Worker: pasar un `env` a `fetch(request, env)`
+          // NO funciona, porque el wrapper usa los bindings de miniflare.
+          SESSION_SECRET: 'secreto-de-prueba-suficientemente-largo-para-hmac',
         },
       },
     })),
