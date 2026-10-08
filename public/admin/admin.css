@@ -32,6 +32,22 @@
   box-sizing: border-box;
 }
 
+/*
+ * `[hidden]` tiene que ganar SIEMPRE.
+ *
+ * El navegador aplica `[hidden] { display: none }` desde su propia hoja de
+ * estilos, pero cualquier regla de autor con `display` le gana. Eso significa
+ * que `.login { display: grid }` dejaba el formulario visible aunque el JS le
+ * pusiera `hidden = true`: el login funcionaba, el panel se cargaba... pero
+ * quedaba debajo del formulario y fuera de pantalla. Síntoma: "no redirige".
+ *
+ * El `!important` es deliberado. Es lo que hacen Bootstrap y compañía por este
+ * motivo exacto.
+ */
+[hidden] {
+  display: none !important;
+}
+
 body.admin {
   margin: 0;
   background: var(--bg);
