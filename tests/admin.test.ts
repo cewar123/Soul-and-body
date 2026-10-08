@@ -264,6 +264,7 @@ describe('protección de las rutas admin', () => {
 
 describe('rutas admin con sesión válida', () => {
   let cookie: string;
+  let bearer: string;
 
   beforeEach(async () => {
     const res = await authedFetch('/api/admin/login', {
@@ -272,6 +273,56 @@ describe('rutas admin con sesión válida', () => {
       body: JSON.stringify({ username: 'wendy', password: PASSWORD }),
     });
     cookie = res.headers.get('Set-Cookie')?.split(';')[0] ?? '';
+    // El login devuelve también el token para usarlo como Bearer, que es el
+    // transporte que funciona cuando el navegador rechaza la cookie.
+    const loginBody = (await res.json()) as { token?: string; username: string };
+    bearer = loginBody.token ?? '';
+  });
+
+  it('el login devuelve un token utilizable como Bearer', () => {
+    expect(bearer).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+  });
+
+  it('acepta Authorization: Bearer en vez de cookie', async () => {
+    // En *.workers.dev el navegador no siempre guarda la cookie, así que el
+    // panel manda el token como header. Sin esto, el login sería imposible.
+    const res = await authedFetch(
+      '/api/admin/me',
+      { headers: { Authorization: `Bearer ${bearer}` } },
+    );
+    expect(res.status).toBe(200);
+    const me = (await res.json()) as { username: string };
+    expect(me.username).toBe('wendy');
+  });
+
+  it('protege las mutaciones con Bearer', async () => {
+    const res = await authedFetch(
+      '/api/admin/blocked-dates',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'https://sb.test',
+          Authorization: `Bearer ${bearer}`,
+        },
+        body: JSON.stringify({ date: '2026-11-27', reason: 'Inventario' }),
+      },
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it('rechaza un Bearer manipulado', async () => {
+    const res = await authedFetch(
+      '/api/admin/me',
+      { headers: { Authorization: `Bearer ${bearer.slice(0, -4)}XXXX` } },
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('rechaza un Bearer vacío', async () => {
+    expect(
+      (await authedFetch('/api/admin/me', { headers: { Authorization: 'Bearer ' } })).status,
+    ).toBe(401);
   });
 
   it('GET /me responde con el usuario', async () => {

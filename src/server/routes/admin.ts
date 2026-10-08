@@ -31,7 +31,13 @@ import {
   appointmentListQuerySchema,
 } from '../../lib/validation.ts';
 import { verifyPassword, hashPassword } from '../lib/password.ts';
-import { clearSessionCookie, readSession, sameOrigin, sessionCookie } from '../lib/session.ts';
+import {
+  clearSessionCookie,
+  createSessionToken,
+  readSession,
+  sameOrigin,
+  sessionCookie,
+} from '../lib/session.ts';
 import { validationHook } from '../lib/validation.ts';
 import { clientIp, consumeRateLimit, RATE_LIMITS } from '../lib/rateLimit.ts';
 import { addDays, localDateOf, type DateStr } from '../../lib/time.ts';
@@ -91,8 +97,8 @@ adminRoutes.post('/api/admin/login', zValidator('json', loginBodySchema, validat
 
   const admin = await findAdminByUsername(db, username);
 
-  // Se verifica siempre, exista el usuario o no. Si el usuario no existe y no se
-  // hiciera el hash, el tiempo de respuesta revelaría qué usuarios son válidos.
+  // Se verifica siempre, exista el usuario o no. Si el usuario no existe y no
+  // se hiciera el hash, el tiempo de respuesta revelaría cuáles son válidos.
   const stored = admin?.password_hash ?? DUMMY_HASH;
   const valid = await verifyPassword(password, stored);
 
@@ -103,8 +109,17 @@ adminRoutes.post('/api/admin/login', zValidator('json', loginBodySchema, validat
     );
   }
 
+  // Se emiten los DOS transportes:
+  //  · la cookie, que funciona con dominio propio;
+  //  · el token en el cuerpo, que el panel usa como `Authorization: Bearer` y
+  //    que no depende de que el navegador guarde cookies. En `*.workers.dev`
+  //    no siempre lo hace, y sin esto el login sería imposible.
   c.header('Set-Cookie', await sessionCookie(c.env.SESSION_SECRET, admin));
-  return c.json({ username: admin.username });
+
+  return c.json({
+    username: admin.username,
+    token: await createSessionToken(c.env.SESSION_SECRET, admin),
+  });
 });
 
 adminRoutes.post('/api/admin/logout', (c) => {

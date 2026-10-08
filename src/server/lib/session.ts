@@ -73,6 +73,19 @@ async function decode(secret: string, token: string): Promise<Payload | null> {
   }
 }
 
+/** Genera el token firmado (el valor que viaja en cookie o en Bearer). */
+export async function createSessionToken(
+  secret: string,
+  admin: { id: number; username: string },
+  ttlSeconds: number = DEFAULT_TTL_SECONDS,
+): Promise<string> {
+  return encode(secret, {
+    sub: admin.username,
+    sid: admin.id,
+    exp: Math.floor(Date.now() / 1000) + ttlSeconds,
+  });
+}
+
 /**
  * Construye el valor de la cabecera `Set-Cookie` con la sesión iniciada.
  *
@@ -86,13 +99,7 @@ export async function sessionCookie(
   options: { ttlSeconds?: number; secure?: boolean } = {},
 ): Promise<string> {
   const ttl = options.ttlSeconds ?? DEFAULT_TTL_SECONDS;
-  const payload: Payload = {
-    sub: admin.username,
-    sid: admin.id,
-    exp: Math.floor(Date.now() / 1000) + ttl,
-  };
-
-  const token = await encode(secret, payload);
+  const token = await createSessionToken(secret, admin, ttl);
 
   return [
     `${SESSION_COOKIE}=${token}`,
@@ -106,7 +113,7 @@ export async function sessionCookie(
   ].join('; ');
 }
 
-/** Cookie para cerrar sesión: se vacía y caduca de inmediato. */
+/** Cabecera para cerrar sesión: se vacía la cookie almacenada. */
 export function clearSessionCookie(): string {
   return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0; Secure`;
 }
@@ -118,7 +125,36 @@ export interface AdminSession {
 }
 
 /**
- * Valida la cookie de una request y devuelve la sesión, o null.
+ * Extrae el token de sesión de una request.
+ *
+ * Acepta dos transportes, porque `workers.dev` no es fiable para cookies:
+ *
+ *  1. `Authorization: Bearer <token>` — lo usa el panel cuando el navegador
+ *     rechaza la cookie. El token viaja en `sessionStorage`, que se borra al
+ *     cerrar la pestaña.
+ *  2. `Cookie: sb_admin=<token>` — la vía que se usará con dominio propio.
+ *
+ * Se revisa el header primero: si ambos vienen, gana el header.
+ */
+function extractToken(request: Request): string | null {
+  const header = request.headers.get('Authorization');
+  if (header?.startsWith('Bearer ')) {
+    const token = header.slice(7).trim();
+    if (token) return token;
+  }
+
+  const cookieHeader = request.headers.get('Cookie');
+  if (!cookieHeader) return null;
+
+  return cookieHeader
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${SESSION_COOKIE}=`))
+    ?.slice(SESSION_COOKIE.length + 1) ?? null;
+}
+
+/**
+ * Valida el token de una request y devuelve la sesión, o null.
  *
  * Verifica tres cosas: firma válida, formato esperado y que no haya caducado.
  */
@@ -127,15 +163,7 @@ export async function readSession(
   secret: string,
   now: Date = new Date(),
 ): Promise<AdminSession | null> {
-  const cookieHeader = request.headers.get('Cookie');
-  if (!cookieHeader) return null;
-
-  const token = cookieHeader
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${SESSION_COOKIE}=`))
-    ?.slice(SESSION_COOKIE.length + 1);
-
+  const token = extractToken(request);
   if (!token) return null;
 
   const payload = await decode(secret, token);

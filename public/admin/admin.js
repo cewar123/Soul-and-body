@@ -82,17 +82,43 @@
     }, 7000);
   }
 
-  // ── API ─────────────────────────────────────────────────────────────────
+/**
+ * Token de sesión.
+ *
+ * Se guarda en `sessionStorage`, no en `localStorage`: se borra al cerrar la
+ * pestaña, así que un portátil perdido no arrastra una sesión viva.
+ *
+ * La vía "correcta" es la cookie HttpOnly (inmune a XSS), y sigue emitiéndose,
+ * pero `*.workers.dev` no es fiable para almacenarlas: el navegador la rechaza
+ * y el login parece fallar sin motivo. Con dominio propio se puede quitar esto
+ * y quedarse solo con la cookie.
+ */
+const TOKEN_KEY = 'sb_admin_token';
 
-  async function api(path, options = {}) {
-    const res = await fetch(path, {
-      ...options,
-      headers: {
-        Accept: 'application/json',
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-        ...options.headers,
-      },
-    });
+function getToken() {
+  return sessionStorage.getItem(TOKEN_KEY);
+}
+
+function setToken(token) {
+  if (token) sessionStorage.setItem(TOKEN_KEY, token);
+  else sessionStorage.removeItem(TOKEN_KEY);
+}
+
+// ── API ─────────────────────────────────────────────────────────────────
+
+async function api(path, options = {}) {
+  const token = getToken();
+  const res = await fetch(path, {
+    ...options,
+    headers: {
+      Accept: 'application/json',
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      // Si hay token, se manda como Bearer. Si no, se deja que el navegador
+      // mande la cookie por su cuenta.
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
 
     if (res.status === 401) {
       // La sesión expiró o no había: se vuelve al login sin avisar.
@@ -139,39 +165,42 @@
     $('#who').textContent = username;
   }
 
-  async function onLogin(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const error = $('#login-error');
-    error.hidden = true;
-    $('#login-submit').disabled = true;
+async function onLogin(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const error = $('#login-error');
+  error.hidden = true;
+  $('#login-submit').disabled = true;
 
-    try {
-      const result = await api('/api/admin/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          username: form.username.value,
-          password: form.password.value,
-        }),
-      });
-      form.reset();
-      showApp(result.username);
-      await Promise.all([loadStats(), loadAppointments(), loadServices(), loadBlocked()]);
-    } catch (err) {
-      if (err.message !== 'no_session') showError(error, err.message);
-    } finally {
-      $('#login-submit').disabled = false;
-    }
+  try {
+    const result = await api('/api/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: form.username.value,
+        password: form.password.value,
+      }),
+    });
+    setToken(result.token);
+    form.reset();
+    showApp(result.username);
+    await Promise.all([loadStats(), loadAppointments(), loadServices(), loadBlocked()]);
+  } catch (err) {
+    if (err.message !== 'no_session') showError(error, err.message);
+    setToken(null);
+  } finally {
+    $('#login-submit').disabled = false;
   }
+}
 
-  async function onLogout() {
-    try {
-      await api('/api/admin/logout', { method: 'POST' });
-    } catch {
-      /* la cookie se limpia igual */
-    }
-    showLogin();
+async function onLogout() {
+  try {
+    await api('/api/admin/logout', { method: 'POST' });
+  } catch {
+    /* la sesión se descarta en cliente igualmente */
   }
+  setToken(null);
+  showLogin();
+}
 
   // ── Métricas ────────────────────────────────────────────────────────────
 
